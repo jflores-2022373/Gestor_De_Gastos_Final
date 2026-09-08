@@ -1,19 +1,14 @@
 <div class="login-container" style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background-color: #08080a; font-family: inherit; overflow: hidden; position: relative;">
   
-  <!-- Ambiental dinámico con los 4 colores del logo -->
   <div style="position: absolute; top: -15%; left: -10%; width: 45vw; height: 45vw; background: radial-gradient(circle, rgba(0,119,255,0.06) 0%, rgba(0,0,0,0) 70%); pointer-events: none; filter: blur(40px);"></div>
   <div style="position: absolute; bottom: -15%; right: -10%; width: 45vw; height: 45vw; background: radial-gradient(circle, rgba(230,57,70,0.06) 0%, rgba(0,0,0,0) 70%); pointer-events: none; filter: blur(40px);"></div>
 
-  <!-- Tarjeta Principal con Borde de Espectro del Logo -->
   <div class="login-card" style="display: grid; grid-template-columns: 1.1fr 0.9fr; width: 980px; max-width: 95vw; background: #121216; border-radius: 24px; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255,255,255,0.05); position: relative; z-index: 2; overflow: hidden; animation: fadeInCard 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
     
-    <!-- Barra superior con los colores exactos de la cartera y círculo del logo -->
     <div style="position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, #e63946 0%, #ffb703 33%, #2a9d8f 66%, #0077ff 100%);"></div>
 
-    <!-- Panel Izquierdo: Formulario -->
     <div class="form-section" style="padding: 45px 40px; display: flex; flex-direction: column; justify-content: center;">
       
-      <!-- Título de Marca con tipografía roja idéntica a su logotipo -->
       <div class="brand-header" style="margin-bottom: 24px;">
         <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
           <span style="width: 10px; height: 4px; background: #e63946; border-radius: 2px;"></span>
@@ -25,20 +20,18 @@
         <p style="color: #8c8c9a; font-size: 13px; margin: 4px 0 0 0;">Gestión financiera inteligente y segura.</p>
       </div>
 
-      <!-- Error -->
       <div *ngIf="errorMessage" style="margin-bottom: 18px; padding: 12px 16px; background: rgba(230,57,70,0.1); border: 1px solid rgba(230,57,70,0.3); color: #ff6b6b; border-radius: 10px; font-size: 12px; display: flex; align-items: center; gap: 8px;">
         <span style="width: 6px; height: 6px; background: #ff6b6b; border-radius: 50%;"></span>
         {{ errorMessage }}
       </div>
 
-      <!-- Formulario -->
       <form (ngSubmit)="onLogin()" style="display: flex; flex-direction: column; gap: 20px;">
         
         <div class="input-group" style="display: flex; flex-direction: column; gap: 6px;">
           <label style="color: #9c9cae; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">Correo Electrónico</label>
           <div style="position: relative; display: flex; align-items: center;">
             <svg style="position: absolute; left: 14px; color: #666;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-            <input type="email" [(ngModel)]="credentials.email" name="email" placeholder="ejemplo@correo.com" required style="width: 100%; padding: 13px 16px 13px 44px; background: #1a1a20; border: 1px solid #2a2a35; color: #ffffff; border-radius: 12px; font-size: 13px; outline: none; transition: all 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#0077ff'; this.style.boxShadow='0 0 0 4px rgba(0,119,255,0.15)'; this.style.background='#1f1f28'" onblur="this.style.borderColor='#2a2a35'; this.style.boxShadow='none'; this.style.background='#1a1a20'" />
+            <input type="email" [(ngModel)]="credentials.email" name="email" placeholder="ejemplo@correo.com" required style="width: 100%; padding: 13px 16px 13px 44px; background: #1a1a20; border: 1px solid #2a2a35; color: #ffffff; border-radius: 12px; font-size: 13px; outline: none; transition: all 0.3s ease; box-sizing: border-box;" />
           </div>
         </div>
 
@@ -46,29 +39,34 @@
           <label style="color: #9c9cae; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">Contraseña</label>
           <div style="position: relative; display: flex; align-items: center;">
             <svg style="position: absolute; left: 14px; color: #666;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-            <input type="password" [(ngModel)]="credentials.password" name="password" placeholder="••••••••••••" required style="width: 100%; padding: 13px 16px 13px 44px; background: #1a1a20; border: 1px solid #2a2a35; color: #ffffff; border-radius: 12px; font-size: 13px; outline: none; transition: all 0.3s ease; box-sizing: border-box;" onfocus="this.style.borderColor='#0077ff'; this.style.boxShadow='0 0 0 4px rgba(0,119,255,0.15)'; this.style.background='#1f1f28'" onblur="this.style.borderColor='#2a2a35'; this.style.boxShadow='none'; this.style.background='#1a1a20'" />
+            <input type="password" [(ngModel)]="credentials.password" name="password" placeholder="••••••••••••" required style="width: 100%; padding: 13px 16px 13px 44px; background: #1a1a20; border: 1px solid #2a2a35; color: #ffffff; border-radius: 12px; font-size: 13px; outline: none; transition: all 0.3s ease; box-sizing: border-box;" />
           </div>
         </div>
 
-        <!-- Botón con el amarillo y naranja brillante de la moneda y la flecha del logo -->
-        <button type="submit" style="margin-top: 6px; width: 100%; background: linear-gradient(135deg, #ffb703 0%, #e63946 100%); color: #ffffff; border: none; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 20px rgba(255,183,3,0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(230,57,70,0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 20px rgba(255,183,3,0.3)'">
+        <button type="submit" style="margin-top: 6px; width: 100%; background: linear-gradient(135deg, #ffb703 0%, #e63946 100%); color: #ffffff; border: none; padding: 14px; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 20px rgba(255,183,3,0.3);">
           Acceder al Sistema
         </button>
 
       </form>
 
-      <div class="register-redirect" style="margin-top: 26px; text-align: center;">
+      <div style="margin: 20px 0; text-align: center; position: relative;">
+        <div style="border-bottom: 1px solid #2a2a35; margin-bottom: 15px; position: relative;">
+          <span style="background-color: #121216; padding: 0 10px; color: #777788; font-size: 12px; position: relative; top: 6px;">o continúa con</span>
+        </div>
+        
+        <div id="google-btn" style="display: flex; justify-content: center; width: 100%;"></div>
+      </div>
+
+      <div class="register-redirect" style="margin-top: 10px; text-align: center;">
         <span style="color: #777788; font-size: 13px;">¿Aún no dispone de una cuenta? </span>
-        <a routerLink="/register" style="color: #2a9d8f; font-size: 13px; font-weight: 600; text-decoration: none; transition: all 0.2s;" onmouseover="this.style.color='#0077ff'" onmouseout="this.style.color='#2a9d8f'">Solicite su registro</a>
+        <a routerLink="/register" style="color: #2a9d8f; font-size: 13px; font-weight: 600; text-decoration: none;">Solicite su registro</a>
       </div>
 
     </div>
 
-    <!-- Panel Derecho: Sección Ejecutiva con Indicador de Barras de Crecimiento -->
     <div class="welcome-section" style="background: linear-gradient(145deg, #17171f 0%, #0d0d12 100%); border-left: 1px solid rgba(255,255,255,0.05); padding: 50px 40px; display: flex; flex-direction: column; justify-content: center; position: relative;">
       
       <div>
-        <!-- Mini indicador visual imitando las barras de colores del gráfico del logo -->
         <div style="display: flex; align-items: flex-end; gap: 6px; height: 24px; margin-bottom: 22px;">
           <div style="width: 8px; height: 10px; background: #e63946; border-radius: 2px;"></div>
           <div style="width: 8px; height: 15px; background: #ffb703; border-radius: 2px;"></div>
@@ -81,7 +79,7 @@
       </div>
 
       <div style="margin-top: 45px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 12px;">
-        <div style="width: 8px; height: 8px; background: #2a9d8f; border-radius: 50%; box-shadow: 0 0 10px #2a9d8f; animation: pulseGlow 2s infinite;"></div>
+        <div style="width: 8px; height: 8px; background: #2a9d8f; border-radius: 50%; box-shadow: 0 0 10px #2a9d8f;"></div>
         <span style="color: #888899; font-size: 12px; font-weight: 500;">Servidores seguros y cifrados en tiempo real</span>
       </div>
 
@@ -94,10 +92,5 @@
   @keyframes fadeInCard {
     from { opacity: 0; transform: translateY(15px) scale(0.98); }
     to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  @keyframes pulseGlow {
-    0% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.3); opacity: 0.6; }
-    100% { transform: scale(1); opacity: 1; }
   }
 </style>
