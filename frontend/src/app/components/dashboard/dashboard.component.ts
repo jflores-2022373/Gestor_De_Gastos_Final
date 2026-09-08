@@ -1,110 +1,56 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { BaseChartDirective } from 'ng2-charts';
-import { ChartConfiguration } from 'chart.js';
-import { TransactionService, Transaction } from '../../services/transaction.service';
+import { RouterModule, Router } from '@angular/router';
+import { TransactionService } from '../../services/transaction.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, BaseChartDirective],
+  imports: [CommonModule, RouterModule],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
-  transactions: Transaction[] = [];
+  ingresosTotales: number = 0;
+  gastosTotales: number = 0;
+  balanceNeto: number = 0;
+  porcentajeIngresos: number = 50;
+  porcentajeGastos: number = 50;
   
-  totalIncome: number = 0;
-  totalExpense: number = 0;
-  netBalance: number = 0;
-  showExpirationModal: boolean = false;
+  // Alturas para la gráfica basadas en la referencia visual (máximo 30)
+  alturaIngresos: number = 0;
+  alturaGastos: number = 0;
 
-  doughnutChartOptions: ChartConfiguration['options'] = {
-    responsive: true,
-  };
-
-  doughnutChartData: ChartConfiguration['data'] = {
-    labels: ['Ingresos', 'Gastos'],
-    datasets: [
-      {
-        data: [0, 0],
-        backgroundColor: ['#ffcc00', '#1c1c24']
-      }
-    ]
-  };
-
-  barChartOptions: ChartConfiguration['options'] = {
-    responsive: true,
-  };
-
-  barChartData: ChartConfiguration['data'] = {
-    labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio'],
-    datasets: [
-      {
-        data: [0, 0, 0, 0, 0, 0],
-        label: 'Transacciones',
-        backgroundColor: '#ffcc00'
-      }
-    ]
-  };
-
-  constructor(
-    private transactionService: TransactionService,
-    private router: Router
-  ) {}
+  constructor(private transactionService: TransactionService, private router: Router) {}
 
   ngOnInit(): void {
-    this.loadDashboardData();
+    this.cargarDatos();
   }
 
-  loadDashboardData(): void {
-    this.transactionService.getTransactions().subscribe({
-      next: (data) => {
-        this.transactions = data;
-        this.calculateMetrics();
-        this.updateCharts();
-      },
-      error: (err: any) => {
-        console.error('Error al cargar transacciones en el dashboard', err);
-      }
-    });
+  cargarDatos(): void {
+    const totales = this.transactionService.obtenerTotales();
+    this.ingresosTotales = totales.ingresos;
+    this.gastosTotales = totales.gastos;
+    this.balanceNeto = totales.balance;
+
+    const mayorMonto = Math.max(this.ingresosTotales, this.gastosTotales, 1);
+    this.alturaIngresos = Math.round((this.ingresosTotales / mayorMonto) * 220);
+    this.alturaGastos = Math.round((this.gastosTotales / mayorMonto) * 220);
+
+    if (this.ingresosTotales > 0 && this.alturaIngresos < 30) this.alturaIngresos = 30;
+    if (this.gastosTotales > 0 && this.alturaGastos < 30) this.alturaGastos = 30;
+
+    const sumaTotal = this.ingresosTotales + this.gastosTotales;
+    if (sumaTotal > 0) {
+      this.porcentajeIngresos = Math.round((this.ingresosTotales / sumaTotal) * 100);
+      this.porcentajeGastos = 100 - this.porcentajeIngresos;
+    } else {
+      this.porcentajeIngresos = 0;
+      this.porcentajeGastos = 0;
+    }
   }
 
-  calculateMetrics(): void {
-    this.totalIncome = this.transactions
-      .filter(t => t.type === 'Ingreso')
-      .reduce((acc, t) => acc + t.amount, 0);
-
-    this.totalExpense = this.transactions
-      .filter(t => t.type === 'Gasto')
-      .reduce((acc, t) => acc + t.amount, 0);
-
-    this.netBalance = this.totalIncome - this.totalExpense;
-  }
-
-  get balance(): number {
-    return this.netBalance;
-  }
-
-  updateCharts(): void {
-    this.doughnutChartData = {
-      labels: ['Ingresos', 'Gastos'],
-      datasets: [
-        {
-          data: [this.totalIncome, this.totalExpense],
-          backgroundColor: ['#ffcc00', '#1c1c24']
-        }
-      ]
-    };
-  }
-
-  onModalOk(): void {
-    this.showExpirationModal = false;
-  }
-
-  logout(): void {
-    localStorage.clear();
+  cerrarSesion(): void {
     this.router.navigate(['/login']);
   }
 }
