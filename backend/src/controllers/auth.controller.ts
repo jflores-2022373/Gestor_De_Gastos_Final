@@ -7,7 +7,7 @@ const SECRET_KEY = 'FinanzasDashboard2026_Key!';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, role } = req.body;
+    const { email, password } = req.body;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -20,8 +20,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     const newUser = await prisma.user.create({
       data: {
         email,
-        password: hashedPassword,
-        role: role || 'user'
+        password: hashedPassword
       }
     });
 
@@ -49,15 +48,14 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email },
       SECRET_KEY,
       { expiresIn: '24h' }
     );
 
     res.status(200).json({
       message: 'Login exitoso',
-      token,
-      role: user.role
+      token
     });
   } catch (error) {
     console.error('Error detallado en login:', error);

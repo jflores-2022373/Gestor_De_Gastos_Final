@@ -1,142 +1,118 @@
-<div class="dashboard-container" style="display: flex; height: 100vh; background-color: #121212; color: #ffffff; font-family: sans-serif; overflow: hidden;">
-  
-  <!-- Sidebar Unificado -->
-  <aside style="width: 260px; background-color: #121212; border-right: 2px solid #ffd700; display: flex; flex-direction: column; justify-content: space-between; padding: 30px 20px; position: relative; box-shadow: 5px 0 25px rgba(0,0,0,0.8);">
-    <div style="position: absolute; right: -8px; top: 75px; height: 35px; width: 4px; background-color: #ffd700; border-radius: 2px;"></div>
-    <div style="position: absolute; right: -8px; top: 135px; height: 35px; width: 4px; background-color: #ffd700; border-radius: 2px;"></div>
-
-    <div>
-      <h2 style="color: #ffd700; font-size: 22px; font-weight: bold; margin-bottom: 45px; letter-spacing: 2px; text-shadow: 0 0 12px rgba(255,215,0,0.4);">SPENDWISE</h2>
-      
-      <nav style="display: flex; flex-direction: column; gap: 15px;">
-        <a routerLink="/dashboard" style="color: #a0aec0; text-decoration: none; font-size: 16px; font-weight: 500; padding: 12px 15px; border-radius: 8px; transition: all 0.3s ease;" onmouseover="this.style.color='#ffd700'; this.style.background='rgba(255,215,0,0.05)'" onmouseout="this.style.color='#a0aec0'; this.style.background='transparent'">Dashboard</a>
-        <a routerLink="/transactions" style="color: #ffd700; text-decoration: none; font-size: 16px; font-weight: bold; padding: 12px 15px; background: rgba(255,215,0,0.1); border-radius: 8px; box-shadow: inset 0 0 10px rgba(255,215,0,0.05);">Transacciones</a>
-      </nav>
+<div class="dashboard-container">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <h2>SPENDWISE</h2>
     </div>
-
-    <button (click)="cerrarSesion()" style="background-color: #ffd700; color: #121212; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; box-shadow: 0 4px 20px rgba(255,215,0,0.3); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 25px rgba(255,215,0,0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 20px rgba(255,215,0,0.3)'">
-      Cerrar sesión
-    </button>
+    <nav class="nav-links">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-item">Dashboard</a>
+      <a routerLink="/transacciones" routerLinkActive="active" class="nav-item">Transacciones</a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout" (click)="logout()">Cerrar sesión</button>
+    </div>
   </aside>
 
-  <!-- Contenido Principal -->
-  <main style="flex: 1; padding: 40px; overflow-y: auto; background-color: #121212;">
-    
-    <!-- Encabezado con Botones de Cambio de Vista Interactivos -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+  <!-- Main Content -->
+  <main class="main-content">
+    <div class="module-header-flex">
       <div>
-        <h2 style="color: #ffffff; font-size: 24px; font-weight: bold;">Módulo de Transacciones</h2>
-        <p style="color: #a0aec0; font-size: 13px; margin-top: 5px;">Gestión financiera centralizada y persistente.</p>
+        <h2>Módulo de Transacciones</h2>
+        <p class="subtitle">Gestión financiera centralizada y persistente.</p>
       </div>
-
-      <div style="display: flex; gap: 10px; background: #1a1a1a; padding: 6px; border: 1px solid #2a2a2a; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
-        <button (click)="cambiarVista('ingreso')" [style.background]="vistaActual === 'ingreso' ? '#ffd700' : 'transparent'" [style.color]="vistaActual === 'ingreso' ? '#121212' : '#a0aec0'" style="border: none; padding: 10px 22px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.3s ease;" onmouseover="if(this.style.backgroundColor!=='rgb(255, 215, 0)') this.style.color='#ffffff'" onmouseout="if(this.style.backgroundColor!=='rgb(255, 215, 0)') this.style.color='#a0aec0'">
-          Vista Ingresos
-        </button>
-        <button (click)="cambiarVista('gasto')" [style.background]="vistaActual === 'gasto' ? '#ffd700' : 'transparent'" [style.color]="vistaActual === 'gasto' ? '#121212' : '#a0aec0'" style="border: none; padding: 10px 22px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.3s ease;" onmouseover="if(this.style.backgroundColor!=='rgb(255, 215, 0)') this.style.color='#ffffff'" onmouseout="if(this.style.backgroundColor!=='rgb(255, 215, 0)') this.style.color='#a0aec0'">
-          Vista Egresos
-        </button>
+      <div class="toggle-views">
+        <button [class.active]="vistaActual === 'ingreso'" (click)="cambiarVista('ingreso')">Vista Ingresos</button>
+        <button [class.active]="vistaActual === 'egreso'" (click)="cambiarVista('egreso')">Vista Egresos</button>
       </div>
     </div>
 
-    <!-- Tarjetas de Totales -->
-    <div style="display: flex; justify-content: space-between; background-color: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 14px; padding: 25px 30px; margin-bottom: 35px; align-items: center; box-shadow: 0 8px 25px rgba(0,0,0,0.5);">
-      
-      <div style="text-align: center; flex: 1; position: relative;">
-        <span style="color: #22c55e; font-size: 12px; font-weight: bold; letter-spacing: 1px;">INGRESOS TOTALES</span>
-        <h3 style="color: #ffffff; font-size: 22px; font-weight: bold; margin-top: 6px;">Q{{ totalIngresos | number:'1.2-2' }}</h3>
-        <div style="position: absolute; right: 0; top: 10px; height: 35px; width: 2px; background-color: #ffd700; opacity: 0.7;"></div>
-        <div style="position: absolute; right: -6px; top: 10px; height: 35px; width: 2px; background-color: #ffd700; opacity: 0.7;"></div>
+    <!-- Totales -->
+    <section class="top-cards">
+      <div class="card">
+        <span class="card-title green">INGRESOS TOTALES</span>
+        <h2 class="card-value">Q{{ ingresosTotales | number:'1.2-2' }}</h2>
       </div>
-
-      <div style="text-align: center; flex: 1; position: relative;">
-        <span style="color: #ef4444; font-size: 12px; font-weight: bold; letter-spacing: 1px;">EGRESOS TOTALES</span>
-        <h3 style="color: #ffffff; font-size: 22px; font-weight: bold; margin-top: 6px;">Q{{ totalGastos | number:'1.2-2' }}</h3>
-        <div style="position: absolute; right: 0; top: 10px; height: 35px; width: 2px; background-color: #ffd700; opacity: 0.7;"></div>
-        <div style="position: absolute; right: -6px; top: 10px; height: 35px; width: 2px; background-color: #ffd700; opacity: 0.7;"></div>
+      <div class="card-divider"></div>
+      <div class="card">
+        <span class="card-title red">EGRESOS TOTALES</span>
+        <h2 class="card-value">Q{{ egresosTotales | number:'1.2-2' }}</h2>
       </div>
-
-      <div style="text-align: center; flex: 1;">
-        <span style="color: #ffd700; font-size: 12px; font-weight: bold; letter-spacing: 1px;">BALANCE NETO</span>
-        <h3 style="color: #ffffff; font-size: 22px; font-weight: bold; margin-top: 6px;">Q{{ balanceNeto | number:'1.2-2' }}</h3>
+      <div class="card-divider"></div>
+      <div class="card">
+        <span class="card-title yellow">BALANCE NETO</span>
+        <h2 class="card-value">Q{{ balanceNeto | number:'1.2-2' }}</h2>
       </div>
+    </section>
 
-    </div>
-
-    <!-- Panel de Registro y Tabla Interactiva -->
-    <div style="display: flex; gap: 30px;">
-      
-      <!-- Formulario Dinámico -->
-      <div style="flex: 1; background-color: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 14px; padding: 30px; box-shadow: 0 8px 25px rgba(0,0,0,0.5); height: fit-content;">
-        <h3 style="color: #ffd700; font-size: 16px; font-weight: bold; margin-bottom: 20px;">
-          {{ editIndex !== null ? 'Editar Transacción' : (vistaActual === 'ingreso' ? 'Registrar Nuevo Ingreso' : 'Registrar Nuevo Egreso') }}
+    <!-- Formulario e Historial -->
+    <section class="transaction-grid">
+      <div class="form-card">
+        <h3 class="section-subtitle">
+          {{ editandoId ? 'Editar' : 'Registrar Nuevo' }} {{ vistaActual === 'ingreso' ? 'Ingreso' : 'Egreso' }}
         </h3>
-
-        <div style="display: flex; flex-direction: column; gap: 15px;">
-          <div>
-            <label style="font-size: 12px; color: #a0aec0; font-weight: bold; display: block; margin-bottom: 6px;">DESCRIPCIÓN</label>
-            <input type="text" [(ngModel)]="descripcion" placeholder="Ej. Salario, Alquiler, Compras..." style="width: 100%; background: #121212; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px; color: #ffffff; outline: none; transition: border-color 0.3s;" onfocus="this.style.borderColor='#ffd700'" onblur="this.style.borderColor='#2a2a2a'">
-          </div>
-
-          <div>
-            <label style="font-size: 12px; color: #a0aec0; font-weight: bold; display: block; margin-bottom: 6px;">MONTO (Q)</label>
-            <input type="number" [(ngModel)]="monto" placeholder="0.00" style="width: 100%; background: #121212; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px; color: #ffffff; outline: none; transition: border-color 0.3s;" onfocus="this.style.borderColor='#ffd700'" onblur="this.style.borderColor='#2a2a2a'">
-          </div>
-
-          <div>
-            <label style="font-size: 12px; color: #a0aec0; font-weight: bold; display: block; margin-bottom: 6px;">CATEGORÍA ESPECÍFICA</label>
-            <select [(ngModel)]="categoria" style="width: 100%; background: #121212; border: 1px solid #2a2a2a; border-radius: 8px; padding: 12px; color: #ffffff; outline: none; transition: border-color 0.3s;" onfocus="this.style.borderColor='#ffd700'" onblur="this.style.borderColor='#2a2a2a'">
-              <option value="" disabled selected>Seleccione una categoría</option>
-              <ng-container *ngIf="vistaActual === 'ingreso'">
-                <option *ngFor="let cat of categoriasIngreso" [value]="cat">{{ cat }}</option>
-              </ng-container>
-              <ng-container *ngIf="vistaActual === 'gasto'">
-                <option *ngFor="let cat of categoriasGasto" [value]="cat">{{ cat }}</option>
-              </ng-container>
-            </select>
-          </div>
-
-          <button (click)="guardar()" style="background-color: #ffd700; color: #121212; border: none; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; box-shadow: 0 4px 15px rgba(255,215,0,0.3); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(255,215,0,0.5)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(255,215,0,0.3)'">
-            {{ editIndex !== null ? 'Actualizar Transacción' : (vistaActual === 'ingreso' ? 'Guardar Ingreso' : 'Guardar Egreso') }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Historial de Transacciones con Animaciones de Fila -->
-      <div style="flex: 1.6; background-color: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 14px; padding: 30px; box-shadow: 0 8px 25px rgba(0,0,0,0.5);">
-        <h3 style="color: #ffffff; font-size: 16px; font-weight: bold; margin-bottom: 20px;">
-          Historial de {{ vistaActual === 'ingreso' ? 'Ingresos' : 'Egresos' }}
-        </h3>
-
-        <div *ngIf="transaccionesFiltradas.length === 0" style="text-align: center; color: #a0aec0; padding: 40px; font-size: 14px;">
-          No hay registros en esta sección.
+        
+        <div class="input-group">
+          <label>DESCRIPCIÓN</label>
+          <input type="text" [(ngModel)]="descripcion" placeholder="Ej. Salario, Alquiler, Compras..." />
         </div>
 
-        <table *ngIf="transaccionesFiltradas.length > 0" style="width: 100%; border-collapse: collapse; text-align: left;">
-          <thead>
-            <tr style="color: #a0aec0; font-size: 11px; border-bottom: 1px solid #2a2a2a;">
-              <th style="padding-bottom: 10px;">DESCRIPCIÓN</th>
-              <th style="padding-bottom: 10px;">CATEGORÍA</th>
-              <th style="padding-bottom: 10px;">MONTO</th>
-              <th style="padding-bottom: 10px; text-align: right;">ACCIONES</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let t of transaccionesFiltradas" style="border-bottom: 1px solid #2a2a2a; font-size: 13px; transition: background 0.2s;" onmouseover="this.style.background='#222c3b'" onmouseout="this.style.background='transparent'">
-              <td style="padding: 14px 0; color: #ffffff; font-weight: 500;">{{ t.descripcion }}</td>
-              <td style="padding: 14px 0; color: #a0aec0;">{{ t.categoria }}</td>
-              <td style="padding: 14px 0; font-weight: bold;" [style.color]="t.tipo === 'ingreso' ? '#22c55e' : '#ef4444'">
-                {{ t.tipo === 'ingreso' ? '+' : '-' }}Q{{ t.monto | number:'1.2-2' }}
-              </td>
-              <td style="padding: 14px 0; text-align: right;">
-                <button (click)="editar(t)" style="background: transparent; border: 1px solid #ffd700; color: #ffd700; padding: 5px 12px; border-radius: 6px; cursor: pointer; margin-right: 6px; font-size: 11px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,215,0,0.1)'" onmouseout="this.style.background='transparent'">Editar</button>
-                <button (click)="eliminar(t)" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; padding: 5px 12px; border-radius: 6px; cursor: pointer; font-size: 11px; transition: background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.1)'" onmouseout="this.style.background='transparent'">Eliminar</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="input-group">
+          <label>MONTO (Q)</label>
+          <input type="number" [(ngModel)]="monto" placeholder="0.00" />
+        </div>
+
+        <div class="input-group">
+          <label>CATEGORÍA ESPECÍFICA</label>
+          <select [(ngModel)]="categoria">
+            <option value="" disabled selected>Seleccione una categoría</option>
+            <option *ngFor="let cat of (vistaActual === 'ingreso' ? categoriasIngresos : categoriasEgresos)" [value]="cat">
+              {{ cat }}
+            </option>
+          </select>
+        </div>
+
+        <button class="btn-submit" (click)="guardarTransaccion()">
+          {{ editandoId ? 'Actualizar' : 'Guardar' }} {{ vistaActual === 'ingreso' ? 'Ingreso' : 'Egreso' }}
+        </button>
+        
+        <button class="btn-cancel" *ngIf="editandoId !== null" (click)="limpiarFormulario()">
+          Cancelar Edición
+        </button>
       </div>
 
-    </div>
+      <div class="table-card">
+        <h3 class="section-subtitle">Historial de {{ vistaActual === 'ingreso' ? 'Ingresos' : 'Egresos' }}</h3>
+        
+        <div class="table-container" *ngIf="listaFiltrada.length > 0; else emptyState">
+          <table>
+            <thead>
+              <tr>
+                <th>DESCRIPCIÓN</th>
+                <th>CATEGORÍA</th>
+                <th>MONTO</th>
+                <th>ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of listaFiltrada">
+                <td>{{ t.descripcion }}</td>
+                <td>{{ t.categoria }}</td>
+                <td [ngClass]="t.tipo === 'ingreso' ? 'text-green' : 'text-red'">
+                  {{ t.tipo === 'ingreso' ? '+' : '-' }}Q{{ t.monto | number:'1.2-2' }}
+                </td>
+                <td class="action-buttons">
+                  <button class="btn-edit" (click)="cargarParaEditar(t)">Editar</button>
+                  <button class="btn-delete" (click)="eliminarTransaccion(t.id)">Eliminar</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <ng-template #emptyState>
+          <p class="empty-text">No hay registros en esta sección.</p>
+        </ng-template>
+      </div>
+    </section>
   </main>
 </div>

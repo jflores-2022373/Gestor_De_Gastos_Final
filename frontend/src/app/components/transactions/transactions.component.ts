@@ -1,8 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule, Router } from '@angular/router';
-import { TransactionService } from '../../services/transaction.service';
+import { Router, RouterModule } from '@angular/router';
+import { Transaction, TransactionService } from '../../services/transaction.service';
 
 @Component({
   selector: 'app-transactions',
@@ -12,98 +12,110 @@ import { TransactionService } from '../../services/transaction.service';
   styleUrls: ['./transactions.component.css']
 })
 export class TransactionsComponent implements OnInit {
-  transacciones: any[] = [];
-  vistaActual: 'ingreso' | 'gasto' = 'ingreso';
-
+  vistaActual: 'ingreso' | 'egreso' = 'ingreso';
+  
   descripcion: string = '';
   monto: number | null = null;
   categoria: string = '';
-  editIndex: number | null = null;
+  fecha: string = new Date().toISOString().split('T')[0];
+  editandoId: number | null = null;
 
-  categoriasIngreso = ['Salario', 'Inversiones', 'Freelance', 'Ventas', 'Bonos', 'Regalos'];
-  categoriasGasto = ['Alimentación y Supermercado', 'Alquiler / Vivienda', 'Servicios Básicos', 'Transporte', 'Entretenimiento', 'Salud / Farmacia'];
+  transacciones: Transaction[] = [];
+
+  categoriasIngresos: string[] = ['Salario', 'Ventas', 'Inversiones', 'Otros Ingresos'];
+  categoriasEgresos: string[] = ['Alimentación', 'Transporte', 'Vivienda', 'Servicios', 'Entretenimiento'];
 
   constructor(private transactionService: TransactionService, private router: Router) {}
 
   ngOnInit(): void {
-    this.cargarTransacciones();
+    this.cargarDatos();
   }
 
-  cargarTransacciones(): void {
-    this.transacciones = this.transactionService.obtenerTransacciones();
+  cargarDatos() {
+    this.transactionService.obtenerTransacciones().subscribe({
+      next: (data) => this.transacciones = data,
+      error: (err) => console.error('Error al cargar transacciones:', err)
+    });
   }
 
-  cambiarVista(tipo: 'ingreso' | 'gasto'): void {
-    this.vistaActual = tipo;
-    this.categoria = '';
-    this.editIndex = null;
-    this.descripcion = '';
-    this.monto = null;
+  cambiarVista(vista: 'ingreso' | 'egreso') {
+    this.vistaActual = vista;
+    this.limpiarFormulario();
   }
 
-  get transaccionesFiltradas() {
-    return this.transacciones.filter(t => String(t.tipo || '').toLowerCase() === this.vistaActual);
+  get listaFiltrada() {
+    return this.transacciones.filter(t => t.tipo === this.vistaActual);
   }
 
-  get totalIngresos(): number {
+  get ingresosTotales(): number {
     return this.transacciones
-      .filter(t => String(t.tipo || '').toLowerCase() === 'ingreso')
-      .reduce((acc, t) => acc + Number(t.monto || 0), 0);
+      .filter(t => t.tipo === 'ingreso')
+      .reduce((acc, t) => acc + Number(t.monto), 0);
   }
 
-  get totalGastos(): number {
+  get egresosTotales(): number {
     return this.transacciones
-      .filter(t => String(t.tipo || '').toLowerCase() === 'gasto')
-      .reduce((acc, t) => acc + Number(t.monto || 0), 0);
+      .filter(t => t.tipo === 'egreso')
+      .reduce((acc, t) => acc + Number(t.monto), 0);
   }
 
   get balanceNeto(): number {
-    return this.totalIngresos - this.totalGastos;
+    return this.ingresosTotales - this.egresosTotales;
   }
 
-  guardar(): void {
-    if (!this.descripcion || this.monto === null || !this.categoria) return;
+  cargarParaEditar(transaccion: Transaction) {
+    if (!transaccion.id) return;
+    this.editandoId = transaccion.id;
+    this.descripcion = transaccion.descripcion;
+    this.monto = transaccion.monto;
+    this.categoria = transaccion.categoria;
+    if (transaccion.fecha) {
+      this.fecha = typeof transaccion.fecha === 'string' ? transaccion.fecha.split('T')[0] : new Date(transaccion.fecha).toISOString().split('T')[0];
+    }
+    this.vistaActual = transaccion.tipo as 'ingreso' | 'egreso';
+  }
 
-    const nuevaTransaccion = {
-      descripcion: this.descripcion,
-      monto: Number(this.monto),
-      categoria: this.categoria,
-      tipo: this.vistaActual
-    };
-
-    if (this.editIndex !== null) {
-      const transaccionFiltradaSeleccionada = this.transaccionesFiltradas[this.editIndex];
-      const indexReal = this.transacciones.findIndex(t => t === transaccionFiltradaSeleccionada);
-      if (indexReal !== -1) {
-        this.transactionService.actualizarTransaccion(indexReal, nuevaTransaccion);
-      }
-      this.editIndex = null;
-    } else {
-      this.transactionService.agregarTransaccion(nuevaTransaccion);
+  guardarTransaccion() {
+    if (!this.descripcion || !this.monto || !this.categoria || !this.fecha) {
+      alert('Por favor complete todos los campos obligatorios.');
+      return;
     }
 
+    const nueva: Transaction = {
+      descripcion: this.descripcion,
+      monto: Math.abs(this.monto),
+      tipo: this.vistaActual,
+      categoria: this.categoria,
+      fecha: this.fecha
+    };
+
+    this.transactionService.agregarTransaccion(nueva).subscribe({
+      next: () => {
+        this.cargarDatos();
+        this.limpiarFormulario();
+      },
+      error: (err) => console.error('Error al guardar:', err)
+    });
+  }
+
+  eliminarTransaccion(id?: number) {
+    if (!id) return;
+    this.transactionService.eliminarTransaccion(id).subscribe({
+      next: () => this.cargarDatos(),
+      error: (err) => console.error('Error al eliminar:', err)
+    });
+  }
+
+  limpiarFormulario() {
     this.descripcion = '';
     this.monto = null;
     this.categoria = '';
-    this.cargarTransacciones();
+    this.fecha = new Date().toISOString().split('T')[0];
+    this.editandoId = null;
   }
 
-  editar(transaccionFiltrada: any): void {
-    this.editIndex = this.transaccionesFiltradas.findIndex(t => t === transaccionFiltrada);
-    this.descripcion = transaccionFiltrada.descripcion;
-    this.monto = transaccionFiltrada.monto;
-    this.categoria = transaccionFiltrada.categoria;
-  }
-
-  eliminar(transaccionFiltrada: any): void {
-    const indexReal = this.transacciones.findIndex(t => t === transaccionFiltrada);
-    if (indexReal !== -1) {
-      this.transactionService.eliminarTransaccion(indexReal);
-      this.cargarTransacciones();
-    }
-  }
-
-  cerrarSesion(): void {
+  logout(): void {
+    localStorage.clear();
     this.router.navigate(['/login']);
   }
 }

@@ -4,44 +4,54 @@ import prisma from '../config/database';
 
 export const getTransactions = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
     const transactions = await prisma.transaction.findMany({
-      where: { userId }
+      where: { userId },
+      orderBy: { fecha: 'desc' }
     });
     res.status(200).json(transactions);
   } catch (error) {
+    console.error('Error al obtener transacciones:', error);
     res.status(500).json({ message: 'Error al obtener transacciones', error });
   }
 };
 
 export const createTransaction = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.user.id;
-    const { title, amount, type, category } = req.body;
+    const userId = Number(req.user.id);
+    const { descripcion, monto, tipo, categoria, fecha } = req.body;
 
     const newTransaction = await prisma.transaction.create({
       data: {
-        title,
-        amount: parseFloat(amount),
-        type,
-        category,
-        userId
+        userId,
+        descripcion,
+        monto: Math.abs(parseFloat(monto)),
+        tipo,
+        categoria,
+        fecha: fecha ? new Date(fecha) : new Date()
       }
     });
 
     res.status(201).json(newTransaction);
   } catch (error) {
+    console.error('Error al crear transacción:', error);
     res.status(500).json({ message: 'Error al crear la transacción', error });
   }
 };
 
 export const deleteTransaction = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const id = req.params.id as string;
-    
-    await prisma.transaction.delete({
-      where: { id }
-    });
+    const id = Number(req.params.id);
+    const userId = Number(req.user.id);
+
+    const transaction = await prisma.transaction.findUnique({ where: { id } });
+
+    if (!transaction || transaction.userId !== userId) {
+      res.status(404).json({ message: 'Transacción no encontrada o no autorizada' });
+      return;
+    }
+
+    await prisma.transaction.delete({ where: { id } });
 
     res.status(200).json({ message: 'Transacción eliminada correctamente' });
   } catch (error: any) {
@@ -49,8 +59,7 @@ export const deleteTransaction = async (req: AuthRequest, res: Response): Promis
       res.status(404).json({ message: 'La transacción ya no existe en la base de datos' });
       return;
     }
-
-    console.error('Error detallado al eliminar:', error);
+    console.error('Error al eliminar transacción:', error);
     res.status(500).json({ message: 'Error al eliminar la transacción', error });
   }
 };
