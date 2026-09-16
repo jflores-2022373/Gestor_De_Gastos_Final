@@ -18,7 +18,7 @@ export class TransactionsComponent implements OnInit {
   monto: number | null = null;
   categoria: string = '';
   fecha: string = new Date().toISOString().split('T')[0];
-  editandoId: number | null = null;
+  editandoId: string | number | null = null;
 
   transacciones: Transaction[] = [];
 
@@ -64,11 +64,11 @@ export class TransactionsComponent implements OnInit {
   }
 
   cargarParaEditar(transaccion: Transaction) {
-    if (!transaccion.id) return;
+    if (transaccion.id === undefined || transaccion.id === null) return;
     this.editandoId = transaccion.id;
-    this.descripcion = transaccion.descripcion;
-    this.monto = transaccion.monto;
-    this.categoria = transaccion.categoria;
+    this.descripcion = transaccion.descripcion || '';
+    this.monto = Math.abs(Number(transaccion.monto)); // Garantiza valor absoluto limpio
+    this.categoria = transaccion.categoria || '';
     if (transaccion.fecha) {
       this.fecha = typeof transaccion.fecha === 'string' ? transaccion.fecha.split('T')[0] : new Date(transaccion.fecha).toISOString().split('T')[0];
     }
@@ -76,29 +76,40 @@ export class TransactionsComponent implements OnInit {
   }
 
   guardarTransaccion() {
-    if (!this.descripcion || !this.monto || !this.categoria || !this.fecha) {
+    if (!this.descripcion || this.monto === null || !this.categoria || !this.fecha) {
       alert('Por favor complete todos los campos obligatorios.');
       return;
     }
 
     const nueva: Transaction = {
+      titulo: this.descripcion,
       descripcion: this.descripcion,
-      monto: Math.abs(this.monto),
+      monto: Math.abs(this.monto), // Siempre se guarda como valor absoluto positivo lógico
       tipo: this.vistaActual,
       categoria: this.categoria,
       fecha: this.fecha
     };
 
-    this.transactionService.agregarTransaccion(nueva).subscribe({
-      next: () => {
-        this.cargarDatos();
-        this.limpiarFormulario();
-      },
-      error: (err) => console.error('Error al guardar:', err)
-    });
+    if (this.editandoId !== null) {
+      this.transactionService.actualizarTransaccion(this.editandoId, nueva).subscribe({
+        next: () => {
+          this.cargarDatos();
+          this.limpiarFormulario();
+        },
+        error: (err) => console.error('Error al actualizar:', err)
+      });
+    } else {
+      this.transactionService.agregarTransaccion(nueva).subscribe({
+        next: () => {
+          this.cargarDatos();
+          this.limpiarFormulario();
+        },
+        error: (err) => console.error('Error al guardar:', err)
+      });
+    }
   }
 
-  eliminarTransaccion(id?: number) {
+  eliminarTransaccion(id?: string | number) {
     if (!id) return;
     this.transactionService.eliminarTransaccion(id).subscribe({
       next: () => this.cargarDatos(),

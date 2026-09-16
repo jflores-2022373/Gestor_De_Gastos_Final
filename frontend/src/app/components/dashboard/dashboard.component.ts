@@ -1,7 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule } from '@angular/router';
-import { TransactionService, Transaction } from '../../services/transaction.service';
+import { Transaction, TransactionService } from '../../services/transaction.service';
+import { Chart, registerables } from 'chart.js';
+
+Chart.register(...registerables);
 
 @Component({
   selector: 'app-dashboard',
@@ -11,59 +14,155 @@ import { TransactionService, Transaction } from '../../services/transaction.serv
   styleUrls: ['./dashboard.component.css']
 })
 export class DashboardComponent implements OnInit {
-  userEmail: string = 'Usuario';
+  transacciones: Transaction[] = [];
+  private doughnutChart: any;
+  private barChart: any;
 
-  ingresosTotales: number = 0;
-  gastosTotales: number = 0;
-  balanceActual: number = 0;
-  
-  porcentajeIngresos: number = 0;
-  alturaIngresos: number = 20;
-  alturaGastos: number = 20;
-
-  constructor(private transactionService: TransactionService, private router: Router) {}
+  constructor(
+    private transactionService: TransactionService, 
+    private router: Router,
+    private cdr: ChangeDetectorRef // <- Inyectamos el detector de cambios
+  ) {}
 
   ngOnInit(): void {
-    this.cargarCorreoUsuario();
-    this.cargarMetricasDesdeBD();
+    this.cargarDatosDashboard();
   }
 
-  cargarCorreoUsuario(): void {
-    const storedEmail = localStorage.getItem('userEmail') || localStorage.getItem('email');
-    if (storedEmail) {
-      this.userEmail = storedEmail;
-    }
-  }
-
-  cargarMetricasDesdeBD(): void {
+  cargarDatosDashboard() {
     this.transactionService.obtenerTransacciones().subscribe({
-      next: (transacciones: Transaction[]) => {
-        this.ingresosTotales = transacciones
-          .filter(t => t.tipo === 'ingreso')
-          .reduce((acc, t) => acc + Number(t.monto), 0);
+      next: (data) => {
+        this.transacciones = (data || []).map((t: any) => ({
+          ...t,
+          tipo: (t.tipo || '').toLowerCase().trim(),
+          categoria: t.categoria || 'General',
+          monto: Number(t.monto || 0)
+        }));
 
-        this.gastosTotales = transacciones
-          .filter(t => t.tipo === 'egreso')
-          .reduce((acc, t) => acc + Number(t.monto), 0);
+        // Forzamos a Angular a actualizar la vista y los getters inmediatamente
+        this.cdr.detectChanges();
 
-        this.balanceActual = this.ingresosTotales - this.gastosTotales;
-
-        const totalSuma = this.ingresosTotales + this.gastosTotales;
-        
-        if (totalSuma > 0) {
-          this.porcentajeIngresos = Math.round((this.ingresosTotales / totalSuma) * 100);
-          
-          const maxValor = Math.max(this.ingresosTotales, this.gastosTotales, 1);
-          this.alturaIngresos = Math.max(30, Math.round((this.ingresosTotales / maxValor) * 160));
-          this.alturaGastos = Math.max(30, Math.round((this.gastosTotales / maxValor) * 160));
-        } else {
-          this.porcentajeIngresos = 0;
-          this.alturaIngresos = 20;
-          this.alturaGastos = 20;
-        }
+        setTimeout(() => this.actualizarGraficas(), 100);
       },
-      error: (err) => console.error('Error al obtener métricas del dashboard:', err)
+      error: (err) => console.error('Error al cargar datos del dashboard:', err)
     });
+  }
+
+  get ingresosTotales(): number {
+    return this.transacciones
+      .filter((t: any) => t.tipo === 'ingreso')
+      .reduce((acc, t) => acc + Number(t.monto), 0);
+  }
+
+  get egresosTotales(): number {
+    return this.transacciones
+      .filter((t: any) => t.tipo === 'egreso')
+      .reduce((acc, t) => acc + Number(t.monto), 0);
+  }
+
+  get balanceNeto(): number {
+    return this.ingresosTotales - this.egresosTotales;
+  }
+
+  get transaccionesRecientes(): Transaction[] {
+    return [...this.transacciones].reverse().slice(0, 5);
+  }
+
+  actualizarGraficas() {
+    // 1. Gráfica de Barras Dobles (Ingresos vs Egresos por Categoría) a la izquierda
+    const canvasBar = document.getElementById('barChart') as HTMLCanvasElement;
+    if (canvasBar) {
+      if (this.barChart) this.barChart.destroy();
+
+      const categoriasSet = new Set<string>();
+      this.transacciones.forEach(t => {
+        if (t.categoria) categoriasSet.add(t.categoria);
+      });
+      const labels = Array.from(categoriasSet);
+
+      const ingresosData: number[] = [];
+      const egresosData: number[] = [];
+
+      labels.forEach(cat => {
+        const totalIng = this.transacciones
+          .filter((t: any) => t.tipo === 'ingreso' && t.categoria === cat)
+          .reduce((acc, t) => acc + Number(t.monto), 0);
+        
+        const totalEgr = this.transacciones
+          .filter((t: any) => t.tipo === 'egreso' && t.categoria === cat)
+          .reduce((acc, t) => acc + Number(t.monto), 0);
+
+        ingresosData.push(totalIng);
+        egresosData.push(totalEgr);
+      });
+
+      this.barChart = new Chart(canvasBar, {
+        type: 'bar',
+        data: {
+          labels: labels.length > 0 ? labels : ['Sin datos'],
+          datasets: [
+            {
+              label: 'Ingresos',
+              data: labels.length > 0 ? ingresosData : [0],
+              backgroundColor: '#10b981',
+              borderRadius: 4
+            },
+            {
+              label: 'Egresos',
+              data: labels.length > 0 ? egresosData : [0],
+              backgroundColor: '#ef4444',
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#ffffff', font: { size: 12 } }
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#ffffff' },
+              grid: { display: false }
+            },
+            y: {
+              ticks: { color: '#ffffff' },
+              grid: { color: 'rgba(255,255,255,0.08)' }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Gráfica de Dona (Distribución general) a la derecha
+    const canvasDoughnut = document.getElementById('financialChart') as HTMLCanvasElement;
+    if (canvasDoughnut) {
+      if (this.doughnutChart) this.doughnutChart.destroy();
+      this.doughnutChart = new Chart(canvasDoughnut, {
+        type: 'doughnut',
+        data: {
+          labels: ['Ingresos', 'Egresos'],
+          datasets: [{
+            data: [this.ingresosTotales, this.egresosTotales],
+            backgroundColor: ['#10b981', '#ef4444'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#ffffff', font: { size: 12 } }
+            }
+          }
+        }
+      });
+    }
   }
 
   logout(): void {

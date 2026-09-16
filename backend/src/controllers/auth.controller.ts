@@ -7,11 +7,23 @@ const SECRET_KEY = 'FinanzasDashboard2026_Key!';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password } = req.body;
+    const { username, email, password } = req.body;
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    // Validar que se envíen todos los campos requeridos
+    if (!username || !email || !password) {
+      res.status(400).json({ message: 'Todos los campos son obligatorios' });
+      return;
+    }
+
+    // Verificar si el usuario o correo ya existen
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        OR: [{ email }, { username }]
+      }
+    });
+
     if (existingUser) {
-      res.status(400).json({ message: 'El correo ya está registrado' });
+      res.status(400).json({ message: 'El correo o el nombre de usuario ya están registrados' });
       return;
     }
 
@@ -19,6 +31,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     const newUser = await prisma.user.create({
       data: {
+        username,
         email,
         password: hashedPassword
       }

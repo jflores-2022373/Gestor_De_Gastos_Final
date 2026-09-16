@@ -97,8 +97,9 @@
               <tr *ngFor="let t of listaFiltrada">
                 <td>{{ t.descripcion }}</td>
                 <td>{{ t.categoria }}</td>
+                <!-- Monto limpio profesional: sin signos de + o -, diferenciado únicamente por color -->
                 <td [ngClass]="t.tipo === 'ingreso' ? 'text-green' : 'text-red'">
-                  {{ t.tipo === 'ingreso' ? '+' : '-' }}Q{{ t.monto | number:'1.2-2' }}
+                  Q{{ t.monto | number:'1.2-2' }}
                 </td>
                 <td class="action-buttons">
                   <button class="btn-edit" (click)="cargarParaEditar(t)">Editar</button>

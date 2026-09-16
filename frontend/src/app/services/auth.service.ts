@@ -17,7 +17,9 @@ export class AuthService {
       tap(response => {
         if (response && response.token) {
           localStorage.setItem('token', response.token);
-          localStorage.setItem('role', response.role);
+          if (response.role) {
+            localStorage.setItem('role', response.role);
+          }
           const identifier = credentials.email || credentials.username || response.email || response.username || 'usuario_default';
           localStorage.setItem('userEmail', identifier);
         }

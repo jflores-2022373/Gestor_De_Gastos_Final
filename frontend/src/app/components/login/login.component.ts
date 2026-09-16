@@ -8,7 +8,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { AuthService } from '../../services/auth.service'; // Asegúrate de importar tu servicio auth
+import { AuthService } from '../../services/auth.service';
 
 declare const google: any;
 
@@ -37,7 +37,7 @@ export class LoginComponent implements AfterViewInit {
   constructor(
     private router: Router,
     private ngZone: NgZone,
-    private authService: AuthService // Inyectamos el servicio de autenticación
+    private authService: AuthService
   ) {}
 
   ngAfterViewInit(): void {
@@ -73,10 +73,8 @@ export class LoginComponent implements AfterViewInit {
         return;
       }
 
-      // 1. Guardar el token de Google
       localStorage.setItem('token', response.credential);
 
-      // 2. Decodificar el JWT de Google para extraer el correo real
       try {
         const payloadBase64 = response.credential.split('.')[1];
         const decodedPayload = JSON.parse(atob(payloadBase64));
@@ -110,18 +108,21 @@ export class LoginComponent implements AfterViewInit {
 
     this.isLoading = true;
 
-    // Conexión real con el backend mediante AuthService
     this.authService.login({ email, password }).subscribe({
       next: (res: any) => {
         this.isLoading = false;
         
-        // Guardar token real y correo devueltos por el backend
-        const tokenReal = res.token || res.accessToken;
+        // Capturamos el token sin importar la estructura que devuelva el backend
+        const tokenReal = res.token || res.accessToken || res.data?.token || res.access_token;
+        
         if (tokenReal) {
           localStorage.setItem('token', tokenReal);
+          console.log('Token guardado exitosamente en el Login');
+        } else {
+          console.error('El backend no devolvió una estructura de token válida:', res);
         }
-        localStorage.setItem('userEmail', email);
 
+        localStorage.setItem('userEmail', email);
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {

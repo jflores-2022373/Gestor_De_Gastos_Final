@@ -15,24 +15,14 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    
-    <!-- Top User Header -->
-    <header class="top-user-header">
-      <div class="header-title-left">
+    <div class="module-header-flex">
+      <div>
         <h2>Panel General</h2>
+        <p class="subtitle">Bienvenido de nuevo a tu centro de control financiero.</p>
       </div>
-      <div class="user-profile-badge">
-        <div class="user-avatar">
-          <span>{{ userEmail.charAt(0).toUpperCase() }}</span>
-        </div>
-        <div class="user-info">
-          <span class="user-welcome">BIENVENIDO,</span>
-          <span class="user-mail">{{ userEmail }}</span>
-        </div>
-      </div>
-    </header>
+    </div>
 
-    <!-- Top Cards -->
+    <!-- Tarjetas de Resumen Financiero -->
     <section class="top-cards">
       <div class="card">
         <span class="card-title green">INGRESOS TOTALES</span>
@@ -40,52 +30,31 @@
       </div>
       <div class="card-divider"></div>
       <div class="card">
-        <span class="card-title red">GASTOS TOTALES</span>
-        <h2 class="card-value">Q{{ gastosTotales | number:'1.2-2' }}</h2>
+        <span class="card-title red">EGRESOS TOTALES</span>
+        <h2 class="card-value">Q{{ egresosTotales | number:'1.2-2' }}</h2>
       </div>
       <div class="card-divider"></div>
       <div class="card">
-        <span class="card-title yellow">BALANCE ACTUAL</span>
-        <h2 class="card-value">Q{{ balanceActual | number:'1.2-2' }}</h2>
+        <span class="card-title yellow">BALANCE NETO</span>
+        <h2 class="card-value">Q{{ balanceNeto | number:'1.2-2' }}</h2>
       </div>
     </section>
 
-    <!-- Bottom Section -->
-    <section class="bottom-section">
-      <div class="chart-card large">
-        <h3 class="section-subtitle">Comparativa de Movimientos</h3>
-        <div class="bar-chart-container">
-          
-          <!-- Barra de Ingresos Dinámica -->
-          <div class="bar-group">
-            <span class="bar-top-label">Q{{ ingresosTotales | number:'1.2-2' }}</span>
-            <div class="bar green-bar" [style.height.px]="alturaIngresos"></div>
-            <span class="bar-bottom-label">Ingresos</span>
-          </div>
-
-          <!-- Barra de Egresos Dinámica -->
-          <div class="bar-group">
-            <span class="bar-top-label">Q{{ gastosTotales | number:'1.2-2' }}</span>
-            <div class="bar red-bar" [style.height.px]="alturaGastos"></div>
-            <span class="bar-bottom-label">Egresos</span>
-          </div>
-
+    <!-- Sección de Gráficas Profesionales -->
+    <section class="charts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
+      <div class="form-card chart-card-container">
+        <h3 class="section-subtitle">Ingresos vs Egresos por Categoría</h3>
+        <div class="chart-wrapper" style="position: relative; height: 280px;">
+          <canvas id="barChart"></canvas>
         </div>
       </div>
 
-      <!-- Donut Chart Dinámico -->
-      <div class="chart-card small">
-        <div class="donut-wrapper" [style.background]="'conic-gradient(#00e676 0% ' + porcentajeIngresos + '%, #ff3d00 ' + porcentajeIngresos + '% 100%)'">
-          <div class="donut-circle">
-            <span class="donut-text">{{ porcentajeIngresos }}%</span>
-          </div>
-        </div>
-        <div class="donut-legend">
-          <span class="legend-item"><span class="legend-dot green"></span> Ingresos</span>
-          <span class="legend-item"><span class="legend-dot red"></span> Gastos</span>
+      <div class="form-card chart-card-container">
+        <h3 class="section-subtitle">Distribución Financiera</h3>
+        <div class="chart-wrapper" style="position: relative; height: 280px;">
+          <canvas id="financialChart"></canvas>
         </div>
       </div>
     </section>
-
   </main>
 </div>
