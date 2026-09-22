@@ -1,12 +1,16 @@
 {
   "name": "spendwise-backend",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "1.1.0",
+  "description": "API REST de SpendWise: autenticación (correo y Google) y gestión de transacciones",
+  "private": true,
+  "main": "src/index.ts",
   "scripts": {
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
@@ -15,13 +19,11 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "google-auth-library": "^10.5.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.9.2",
     "pg": "^8.23.0"
   },
   "devDependencies": {
-    "@prisma/config": "^7.10.0",
-    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",

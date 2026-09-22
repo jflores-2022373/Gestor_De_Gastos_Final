@@ -1,132 +1,207 @@
-import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
-import { Transaction, TransactionService } from '../../services/transaction.service';
+import { RouterModule } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+import {
+  TipoTransaccion,
+  Transaction,
+  TransactionInput,
+  TransactionService,
+} from '../../services/transaction.service';
+import { aFechaInput, hoyLocal } from '../../utils/fechas';
+import { getErrorMessage } from '../../utils/http-error-message';
+
+const CATEGORIAS_INGRESOS = ['Salario', 'Ventas', 'Inversiones', 'Otros Ingresos'];
+const CATEGORIAS_EGRESOS = [
+  'Alimentación',
+  'Transporte',
+  'Vivienda',
+  'Servicios',
+  'Entretenimiento',
+  'Salud',
+  'Educación',
+  'Otros Gastos',
+];
 
 @Component({
   selector: 'app-transactions',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [FormsModule, RouterModule, DecimalPipe, DatePipe],
   templateUrl: './transactions.component.html',
-  styleUrls: ['./transactions.component.css']
+  styleUrls: ['./transactions.component.css'],
 })
 export class TransactionsComponent implements OnInit {
-  vistaActual: 'ingreso' | 'egreso' = 'ingreso';
-  
-  descripcion: string = '';
-  monto: number | null = null;
-  categoria: string = '';
-  fecha: string = new Date().toISOString().split('T')[0];
-  editandoId: string | number | null = null;
+  private readonly transactionService = inject(TransactionService);
+  private readonly authService = inject(AuthService);
 
-  transacciones: Transaction[] = [];
+  readonly hoy = hoyLocal();
 
-  categoriasIngresos: string[] = ['Salario', 'Ventas', 'Inversiones', 'Otros Ingresos'];
-  categoriasEgresos: string[] = ['Alimentación', 'Transporte', 'Vivienda', 'Servicios', 'Entretenimiento'];
+  // Todo el estado usa signals: Angular 22 usa OnPush por defecto y así
+  // la vista se actualiza sola cuando responde el servidor.
+  readonly vistaActual = signal<TipoTransaccion>('ingreso');
 
-  constructor(private transactionService: TransactionService, private router: Router) {}
+  // Campos del formulario (se enlazan con [(ngModel)])
+  readonly descripcion = signal('');
+  readonly monto = signal<number | null>(null);
+  readonly categoria = signal('');
+  readonly fecha = signal(hoyLocal());
+  readonly editandoId = signal<number | null>(null);
+
+  readonly transacciones = signal<Transaction[]>([]);
+
+  readonly isLoading = signal(true);
+  readonly isSaving = signal(false);
+  readonly eliminandoId = signal<number | null>(null);
+  readonly errorMessage = signal('');
+  readonly successMessage = signal('');
+
+  readonly categoriasActuales = computed(() => {
+    const base = this.vistaActual() === 'ingreso' ? CATEGORIAS_INGRESOS : CATEGORIAS_EGRESOS;
+    const actual = this.categoria();
+    // Si se edita un registro con una categoría que ya no está en la lista, se conserva
+    return actual && !base.includes(actual) ? [...base, actual] : base;
+  });
+
+  readonly listaFiltrada = computed(() =>
+    this.transacciones().filter((t) => t.tipo === this.vistaActual())
+  );
+
+  readonly ingresosTotales = computed(() => this.sumar('ingreso'));
+  readonly egresosTotales = computed(() => this.sumar('egreso'));
+  readonly balanceNeto = computed(() => this.ingresosTotales() - this.egresosTotales());
 
   ngOnInit(): void {
     this.cargarDatos();
   }
 
-  cargarDatos() {
+  cargarDatos(): void {
+    this.isLoading.set(true);
     this.transactionService.obtenerTransacciones().subscribe({
-      next: (data) => this.transacciones = data,
-      error: (err) => console.error('Error al cargar transacciones:', err)
+      next: (data) => {
+        this.transacciones.set(data);
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(getErrorMessage(err, 'No se pudieron cargar las transacciones.'));
+      },
     });
   }
 
-  cambiarVista(vista: 'ingreso' | 'egreso') {
-    this.vistaActual = vista;
+  cambiarVista(vista: TipoTransaccion): void {
+    if (this.vistaActual() === vista) return;
+    this.vistaActual.set(vista);
     this.limpiarFormulario();
+    this.limpiarMensajes();
   }
 
-  get listaFiltrada() {
-    return this.transacciones.filter(t => t.tipo === this.vistaActual);
+  cargarParaEditar(transaccion: Transaction): void {
+    this.limpiarMensajes();
+    this.editandoId.set(transaccion.id);
+    this.vistaActual.set(transaccion.tipo);
+    this.descripcion.set(transaccion.descripcion);
+    this.monto.set(transaccion.monto);
+    this.categoria.set(transaccion.categoria);
+    this.fecha.set(aFechaInput(transaccion.fecha));
   }
 
-  get ingresosTotales(): number {
-    return this.transacciones
-      .filter(t => t.tipo === 'ingreso')
-      .reduce((acc, t) => acc + Number(t.monto), 0);
-  }
+  guardarTransaccion(): void {
+    this.limpiarMensajes();
 
-  get egresosTotales(): number {
-    return this.transacciones
-      .filter(t => t.tipo === 'egreso')
-      .reduce((acc, t) => acc + Number(t.monto), 0);
-  }
+    const descripcion = this.descripcion().trim();
+    const montoRaw = this.monto();
+    const monto = Number(montoRaw);
 
-  get balanceNeto(): number {
-    return this.ingresosTotales - this.egresosTotales;
-  }
-
-  cargarParaEditar(transaccion: Transaction) {
-    if (transaccion.id === undefined || transaccion.id === null) return;
-    this.editandoId = transaccion.id;
-    this.descripcion = transaccion.descripcion || '';
-    this.monto = Math.abs(Number(transaccion.monto)); // Garantiza valor absoluto limpio
-    this.categoria = transaccion.categoria || '';
-    if (transaccion.fecha) {
-      this.fecha = typeof transaccion.fecha === 'string' ? transaccion.fecha.split('T')[0] : new Date(transaccion.fecha).toISOString().split('T')[0];
+    if (!descripcion || !this.categoria() || !this.fecha() || montoRaw === null) {
+      this.errorMessage.set('Complete todos los campos: descripción, monto, categoría y fecha.');
+      return;
     }
-    this.vistaActual = transaccion.tipo as 'ingreso' | 'egreso';
-  }
-
-  guardarTransaccion() {
-    if (!this.descripcion || this.monto === null || !this.categoria || !this.fecha) {
-      alert('Por favor complete todos los campos obligatorios.');
+    if (!Number.isFinite(monto) || monto <= 0) {
+      this.errorMessage.set('El monto debe ser mayor que cero.');
       return;
     }
 
-    const nueva: Transaction = {
-      titulo: this.descripcion,
-      descripcion: this.descripcion,
-      monto: Math.abs(this.monto), // Siempre se guarda como valor absoluto positivo lógico
-      tipo: this.vistaActual,
-      categoria: this.categoria,
-      fecha: this.fecha
+    const data: TransactionInput = {
+      descripcion,
+      monto: Math.round(monto * 100) / 100,
+      tipo: this.vistaActual(),
+      categoria: this.categoria(),
+      fecha: this.fecha(),
     };
 
-    if (this.editandoId !== null) {
-      this.transactionService.actualizarTransaccion(this.editandoId, nueva).subscribe({
-        next: () => {
-          this.cargarDatos();
-          this.limpiarFormulario();
-        },
-        error: (err) => console.error('Error al actualizar:', err)
-      });
-    } else {
-      this.transactionService.agregarTransaccion(nueva).subscribe({
-        next: () => {
-          this.cargarDatos();
-          this.limpiarFormulario();
-        },
-        error: (err) => console.error('Error al guardar:', err)
-      });
-    }
-  }
+    const id = this.editandoId();
+    const peticion =
+      id !== null
+        ? this.transactionService.actualizarTransaccion(id, data)
+        : this.transactionService.crearTransaccion(data);
 
-  eliminarTransaccion(id?: string | number) {
-    if (!id) return;
-    this.transactionService.eliminarTransaccion(id).subscribe({
-      next: () => this.cargarDatos(),
-      error: (err) => console.error('Error al eliminar:', err)
+    this.isSaving.set(true);
+
+    peticion.subscribe({
+      next: () => {
+        this.isSaving.set(false);
+        this.successMessage.set(
+          id !== null
+            ? 'Registro actualizado correctamente.'
+            : `${data.tipo === 'ingreso' ? 'Ingreso' : 'Egreso'} guardado correctamente.`
+        );
+        this.limpiarFormulario();
+        this.cargarDatos();
+      },
+      error: (err) => {
+        this.isSaving.set(false);
+        this.errorMessage.set(getErrorMessage(err, 'No se pudo guardar el registro.'));
+      },
     });
   }
 
-  limpiarFormulario() {
-    this.descripcion = '';
-    this.monto = null;
-    this.categoria = '';
-    this.fecha = new Date().toISOString().split('T')[0];
-    this.editandoId = null;
+  eliminarTransaccion(transaccion: Transaction): void {
+    const confirmado = confirm(
+      `¿Eliminar "${transaccion.descripcion}" por Q${transaccion.monto.toFixed(2)}? Esta acción no se puede deshacer.`
+    );
+    if (!confirmado) return;
+
+    this.limpiarMensajes();
+    this.eliminandoId.set(transaccion.id);
+
+    this.transactionService.eliminarTransaccion(transaccion.id).subscribe({
+      next: () => {
+        this.eliminandoId.set(null);
+        if (this.editandoId() === transaccion.id) {
+          this.limpiarFormulario();
+        }
+        this.successMessage.set('Registro eliminado.');
+        this.cargarDatos();
+      },
+      error: (err) => {
+        this.eliminandoId.set(null);
+        this.errorMessage.set(getErrorMessage(err, 'No se pudo eliminar el registro.'));
+        this.cargarDatos();
+      },
+    });
+  }
+
+  limpiarFormulario(): void {
+    this.descripcion.set('');
+    this.monto.set(null);
+    this.categoria.set('');
+    this.fecha.set(hoyLocal());
+    this.editandoId.set(null);
   }
 
   logout(): void {
-    localStorage.clear();
-    this.router.navigate(['/login']);
+    this.authService.logout();
+  }
+
+  private limpiarMensajes(): void {
+    this.errorMessage.set('');
+    this.successMessage.set('');
+  }
+
+  private sumar(tipo: TipoTransaccion): number {
+    return this.transacciones()
+      .filter((t) => t.tipo === tipo)
+      .reduce((acc, t) => acc + t.monto, 0);
   }
 }

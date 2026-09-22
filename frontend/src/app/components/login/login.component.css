@@ -730,3 +730,31 @@
     display: none;
   }
 }
+
+/* Aviso informativo (por ejemplo, sesión expirada) */
+.info-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 13px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(42, 157, 143, .35);
+  border-radius: 10px;
+  background: rgba(42, 157, 143, .08);
+  color: #6fd3c4;
+  font-size: 12px;
+}
+
+.info-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #2a9d8f;
+  color: #ffffff;
+  font-weight: 800;
+  font-style: italic;
+  flex-shrink: 0;
+}

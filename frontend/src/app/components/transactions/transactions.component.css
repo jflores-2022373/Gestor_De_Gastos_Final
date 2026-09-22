@@ -325,3 +325,66 @@ td {
   margin-top: 40px;
   font-size: 14px;
 }
+
+/* =========================================
+   AJUSTES: alertas, fila de fecha y estados
+   ========================================= */
+.input-group input,
+.input-group select {
+  box-sizing: border-box;
+}
+
+/* Hace visible el ícono del calendario sobre fondo oscuro */
+.input-group input[type='date'] {
+  color-scheme: dark;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.form-alert.error {
+  background: rgba(255, 61, 0, 0.08);
+  border: 1px solid rgba(255, 61, 0, 0.35);
+  color: #ff8a65;
+}
+
+.form-alert.success {
+  background: rgba(0, 230, 118, 0.08);
+  border: 1px solid rgba(0, 230, 118, 0.3);
+  color: #69f0ae;
+}
+
+.btn-submit:disabled,
+.btn-delete:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+tr.editing td {
+  background-color: rgba(255, 211, 105, 0.06);
+}
+
+td {
+  padding-right: 10px;
+}
+
+@media (max-width: 1000px) {
+  .transaction-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* El menú queda arriba (igual que en el Dashboard) y no centrado verticalmente */
+.nav-links {
+  flex-grow: 1;
+}

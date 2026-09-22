@@ -15,46 +15,114 @@
 
   <!-- Main Content -->
   <main class="main-content">
-    <div class="module-header-flex">
-      <div>
+    <!-- Encabezado con datos del usuario -->
+    <header class="top-user-header">
+      <div class="header-title-left">
         <h2>Panel General</h2>
-        <p class="subtitle">Bienvenido de nuevo a tu centro de control financiero.</p>
+        <p class="subtitle">Bienvenido de nuevo a su centro de control financiero.</p>
       </div>
-    </div>
+
+      <div class="user-profile-badge">
+        <div class="user-avatar">
+          @if (session.user()?.avatarUrl && !avatarFailed()) {
+            <img
+              [src]="session.user()?.avatarUrl"
+              alt="Foto de perfil"
+              referrerpolicy="no-referrer"
+              (error)="avatarFailed.set(true)"
+            />
+          } @else {
+            {{ session.initials() }}
+          }
+        </div>
+        <div class="user-info">
+          <span class="user-welcome">HOLA, {{ session.displayName().toUpperCase() }}</span>
+          <span class="user-mail">{{ session.user()?.email }}</span>
+        </div>
+      </div>
+    </header>
+
+    @if (errorMessage()) {
+      <div class="state-message error">
+        <span>{{ errorMessage() }}</span>
+        <button type="button" (click)="cargarDatosDashboard()">Reintentar</button>
+      </div>
+    }
 
     <!-- Tarjetas de Resumen Financiero -->
-    <section class="top-cards">
+    <section class="top-cards" [class.loading]="isLoading()">
       <div class="card">
         <span class="card-title green">INGRESOS TOTALES</span>
-        <h2 class="card-value">Q{{ ingresosTotales | number:'1.2-2' }}</h2>
+        <h2 class="card-value">Q{{ ingresosTotales() | number: '1.2-2' }}</h2>
       </div>
       <div class="card-divider"></div>
       <div class="card">
         <span class="card-title red">EGRESOS TOTALES</span>
-        <h2 class="card-value">Q{{ egresosTotales | number:'1.2-2' }}</h2>
+        <h2 class="card-value">Q{{ egresosTotales() | number: '1.2-2' }}</h2>
       </div>
       <div class="card-divider"></div>
       <div class="card">
         <span class="card-title yellow">BALANCE NETO</span>
-        <h2 class="card-value">Q{{ balanceNeto | number:'1.2-2' }}</h2>
+        <h2 class="card-value" [class.negative]="balanceNeto() < 0">Q{{ balanceNeto() | number: '1.2-2' }}</h2>
       </div>
     </section>
 
-    <!-- Sección de Gráficas Profesionales -->
-    <section class="charts-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
-      <div class="form-card chart-card-container">
+    <!-- Gráficas -->
+    <section class="charts-grid">
+      <div class="chart-card">
         <h3 class="section-subtitle">Ingresos vs Egresos por Categoría</h3>
-        <div class="chart-wrapper" style="position: relative; height: 280px;">
-          <canvas id="barChart"></canvas>
+        <div class="chart-wrapper">
+          <canvas #barCanvas></canvas>
         </div>
       </div>
 
-      <div class="form-card chart-card-container">
+      <div class="chart-card">
         <h3 class="section-subtitle">Distribución Financiera</h3>
-        <div class="chart-wrapper" style="position: relative; height: 280px;">
-          <canvas id="financialChart"></canvas>
+        <div class="chart-wrapper">
+          <canvas #doughnutCanvas></canvas>
         </div>
       </div>
+    </section>
+
+    <!-- Movimientos recientes -->
+    <section class="chart-card">
+      <div class="recent-header">
+        <h3 class="section-subtitle">Movimientos Recientes</h3>
+        <a routerLink="/transacciones" class="see-all">Ver todos →</a>
+      </div>
+
+      @if (isLoading()) {
+        <p class="empty-text">Cargando movimientos...</p>
+      } @else if (transaccionesRecientes().length === 0) {
+        <p class="empty-text">
+          Aún no tiene movimientos. <a routerLink="/transacciones">Registre el primero</a>.
+        </p>
+      } @else {
+        <div class="table-container">
+          <table class="recent-table">
+            <thead>
+              <tr>
+                <th>FECHA</th>
+                <th>DESCRIPCIÓN</th>
+                <th>CATEGORÍA</th>
+                <th class="amount">MONTO</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (t of transaccionesRecientes(); track t.id) {
+                <tr>
+                  <td>{{ t.fecha | date: 'dd/MM/yyyy' : 'UTC' }}</td>
+                  <td>{{ t.descripcion }}</td>
+                  <td>{{ t.categoria }}</td>
+                  <td class="amount" [class.text-green]="t.tipo === 'ingreso'" [class.text-red]="t.tipo === 'egreso'">
+                    {{ t.tipo === 'ingreso' ? '+' : '−' }} Q{{ t.monto | number: '1.2-2' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
     </section>
   </main>
 </div>

@@ -1,5 +1,6 @@
 node_modules
-# Keep environment variables out of version control
+dist
+# Variables de entorno: nunca se suben al repositorio
 .env
-
+# Cliente de Prisma generado automáticamente
 /src/generated/prisma

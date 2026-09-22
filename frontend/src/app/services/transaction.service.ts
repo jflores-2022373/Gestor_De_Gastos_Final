@@ -1,50 +1,51 @@
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../environments/environment';
+
+export type TipoTransaccion = 'ingreso' | 'egreso';
 
 export interface Transaction {
-  id?: string | number;
-  titulo?: string;
-  descripcion?: string; // Añadido para que coincida con el componente
+  id: number;
+  descripcion: string;
   monto: number;
-  tipo: 'ingreso' | 'egreso';
-  categoria?: string;
-  fecha?: string;
+  tipo: TipoTransaccion;
+  categoria: string;
+  /** Fecha ISO, por ejemplo "2026-09-20T12:00:00.000Z" */
+  fecha: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+export interface TransactionInput {
+  descripcion: string;
+  monto: number;
+  tipo: TipoTransaccion;
+  categoria: string;
+  /** Formato YYYY-MM-DD */
+  fecha: string;
+}
+
+@Injectable({ providedIn: 'root' })
 export class TransactionService {
-  private apiUrl = 'http://localhost:3000/api/transactions';
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = `${environment.apiUrl}/transactions`;
 
-  constructor(private http: HttpClient) {}
-
-  private getHeaders(): HttpHeaders {
-    const token = localStorage.getItem('token') || '';
-    return new HttpHeaders({
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    });
-  }
+  // El token lo agrega automáticamente el authInterceptor
 
   obtenerTransacciones(): Observable<Transaction[]> {
-    return this.http.get<Transaction[]>(this.apiUrl, { headers: this.getHeaders() });
+    return this.http.get<Transaction[]>(this.apiUrl);
   }
 
-  crearTransaccion(transaccion: Transaction): Observable<Transaction> {
-    return this.http.post<Transaction>(this.apiUrl, transaccion, { headers: this.getHeaders() });
+  crearTransaccion(data: TransactionInput): Observable<Transaction> {
+    return this.http.post<Transaction>(this.apiUrl, data);
   }
 
-  agregarTransaccion(transaccion: Transaction): Observable<Transaction> {
-    return this.crearTransaccion(transaccion);
+  actualizarTransaccion(id: number, data: TransactionInput): Observable<Transaction> {
+    return this.http.put<Transaction>(`${this.apiUrl}/${id}`, data);
   }
 
-  actualizarTransaccion(id: string | number, transaccion: Transaction): Observable<Transaction> {
-    return this.http.put<Transaction>(`${this.apiUrl}/${id}`, transaccion, { headers: this.getHeaders() });
-  }
-
-  eliminarTransaccion(id: string | number): Observable<any> {
-    return this.http.delete(`${this.apiUrl}/${id}`, { headers: this.getHeaders() });
+  eliminarTransaccion(id: number): Observable<{ message: string }> {
+    return this.http.delete<{ message: string }>(`${this.apiUrl}/${id}`);
   }
 }

@@ -1,26 +1,43 @@
 generator client {
-  provider = "prisma-client-js"
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
 }
 
 datasource db {
   provider = "postgresql"
 }
 
+enum TipoTransaccion {
+  ingreso
+  egreso
+}
+
 model User {
   id           Int           @id @default(autoincrement())
   username     String        @unique
   email        String        @unique
-  password     String
+  // Null cuando la cuenta se creó solo con Google
+  password     String?
+  // Identificador "sub" de Google; null si nunca inició sesión con Google
+  googleId     String?       @unique
+  avatarUrl    String?
+  createdAt    DateTime      @default(now())
   transactions Transaction[]
 }
 
 model Transaction {
-  id          Int      @id @default(autoincrement())
+  id          Int             @id @default(autoincrement())
   userId      Int
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   descripcion String
-  monto       Float
-  tipo        String   // 'ingreso' o 'egreso'
+  // Decimal evita errores de redondeo con dinero (Float no es exacto)
+  monto       Decimal         @db.Decimal(12, 2)
+  tipo        TipoTransaccion
   categoria   String
-  fecha       DateTime @default(now())
+  fecha       DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([userId, fecha])
 }

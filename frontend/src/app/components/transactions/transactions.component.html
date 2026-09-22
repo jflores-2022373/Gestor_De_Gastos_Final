@@ -18,11 +18,15 @@
     <div class="module-header-flex">
       <div>
         <h2>Módulo de Transacciones</h2>
-        <p class="subtitle">Gestión financiera centralizada y persistente.</p>
+        <p class="subtitle">Registre, edite y elimine sus ingresos y egresos.</p>
       </div>
       <div class="toggle-views">
-        <button [class.active]="vistaActual === 'ingreso'" (click)="cambiarVista('ingreso')">Vista Ingresos</button>
-        <button [class.active]="vistaActual === 'egreso'" (click)="cambiarVista('egreso')">Vista Egresos</button>
+        <button type="button" [class.active]="vistaActual() === 'ingreso'" (click)="cambiarVista('ingreso')">
+          Vista Ingresos
+        </button>
+        <button type="button" [class.active]="vistaActual() === 'egreso'" (click)="cambiarVista('egreso')">
+          Vista Egresos
+        </button>
       </div>
     </div>
 
@@ -30,89 +34,134 @@
     <section class="top-cards">
       <div class="card">
         <span class="card-title green">INGRESOS TOTALES</span>
-        <h2 class="card-value">Q{{ ingresosTotales | number:'1.2-2' }}</h2>
+        <h2 class="card-value">Q{{ ingresosTotales() | number: '1.2-2' }}</h2>
       </div>
       <div class="card-divider"></div>
       <div class="card">
         <span class="card-title red">EGRESOS TOTALES</span>
-        <h2 class="card-value">Q{{ egresosTotales | number:'1.2-2' }}</h2>
+        <h2 class="card-value">Q{{ egresosTotales() | number: '1.2-2' }}</h2>
       </div>
       <div class="card-divider"></div>
       <div class="card">
         <span class="card-title yellow">BALANCE NETO</span>
-        <h2 class="card-value">Q{{ balanceNeto | number:'1.2-2' }}</h2>
+        <h2 class="card-value" [class.text-red]="balanceNeto() < 0">Q{{ balanceNeto() | number: '1.2-2' }}</h2>
       </div>
     </section>
 
     <!-- Formulario e Historial -->
     <section class="transaction-grid">
-      <div class="form-card">
+      <form class="form-card" (ngSubmit)="guardarTransaccion()">
         <h3 class="section-subtitle">
-          {{ editandoId ? 'Editar' : 'Registrar Nuevo' }} {{ vistaActual === 'ingreso' ? 'Ingreso' : 'Egreso' }}
+          {{ editandoId() !== null ? 'Editar' : 'Registrar Nuevo' }} {{ vistaActual() === 'ingreso' ? 'Ingreso' : 'Egreso' }}
         </h3>
-        
+
+        @if (errorMessage()) {
+          <div class="form-alert error">{{ errorMessage() }}</div>
+        }
+        @if (successMessage()) {
+          <div class="form-alert success">{{ successMessage() }}</div>
+        }
+
         <div class="input-group">
-          <label>DESCRIPCIÓN</label>
-          <input type="text" [(ngModel)]="descripcion" placeholder="Ej. Salario, Alquiler, Compras..." />
+          <label for="descripcion">DESCRIPCIÓN</label>
+          <input
+            id="descripcion"
+            name="descripcion"
+            type="text"
+            maxlength="120"
+            [(ngModel)]="descripcion"
+            placeholder="Ej. Salario, Alquiler, Compras..."
+          />
+        </div>
+
+        <div class="form-row">
+          <div class="input-group">
+            <label for="monto">MONTO (Q)</label>
+            <input
+              id="monto"
+              name="monto"
+              type="number"
+              min="0.01"
+              step="0.01"
+              [(ngModel)]="monto"
+              placeholder="0.00"
+            />
+          </div>
+
+          <div class="input-group">
+            <label for="fecha">FECHA</label>
+            <input id="fecha" name="fecha" type="date" [max]="hoy" [(ngModel)]="fecha" />
+          </div>
         </div>
 
         <div class="input-group">
-          <label>MONTO (Q)</label>
-          <input type="number" [(ngModel)]="monto" placeholder="0.00" />
-        </div>
-
-        <div class="input-group">
-          <label>CATEGORÍA ESPECÍFICA</label>
-          <select [(ngModel)]="categoria">
-            <option value="" disabled selected>Seleccione una categoría</option>
-            <option *ngFor="let cat of (vistaActual === 'ingreso' ? categoriasIngresos : categoriasEgresos)" [value]="cat">
-              {{ cat }}
-            </option>
+          <label for="categoria">CATEGORÍA ESPECÍFICA</label>
+          <select id="categoria" name="categoria" [(ngModel)]="categoria">
+            <option value="" disabled>Seleccione una categoría</option>
+            @for (cat of categoriasActuales(); track cat) {
+              <option [value]="cat">{{ cat }}</option>
+            }
           </select>
         </div>
 
-        <button class="btn-submit" (click)="guardarTransaccion()">
-          {{ editandoId ? 'Actualizar' : 'Guardar' }} {{ vistaActual === 'ingreso' ? 'Ingreso' : 'Egreso' }}
+        <button type="submit" class="btn-submit" [disabled]="isSaving()">
+          @if (isSaving()) {
+            Guardando...
+          } @else {
+            {{ editandoId() !== null ? 'Actualizar' : 'Guardar' }} {{ vistaActual() === 'ingreso' ? 'Ingreso' : 'Egreso' }}
+          }
         </button>
-        
-        <button class="btn-cancel" *ngIf="editandoId !== null" (click)="limpiarFormulario()">
-          Cancelar Edición
-        </button>
-      </div>
+
+        @if (editandoId() !== null) {
+          <button type="button" class="btn-cancel" (click)="limpiarFormulario()">Cancelar Edición</button>
+        }
+      </form>
 
       <div class="table-card">
-        <h3 class="section-subtitle">Historial de {{ vistaActual === 'ingreso' ? 'Ingresos' : 'Egresos' }}</h3>
-        
-        <div class="table-container" *ngIf="listaFiltrada.length > 0; else emptyState">
-          <table>
-            <thead>
-              <tr>
-                <th>DESCRIPCIÓN</th>
-                <th>CATEGORÍA</th>
-                <th>MONTO</th>
-                <th>ACCIONES</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let t of listaFiltrada">
-                <td>{{ t.descripcion }}</td>
-                <td>{{ t.categoria }}</td>
-                <!-- Monto limpio profesional: sin signos de + o -, diferenciado únicamente por color -->
-                <td [ngClass]="t.tipo === 'ingreso' ? 'text-green' : 'text-red'">
-                  Q{{ t.monto | number:'1.2-2' }}
-                </td>
-                <td class="action-buttons">
-                  <button class="btn-edit" (click)="cargarParaEditar(t)">Editar</button>
-                  <button class="btn-delete" (click)="eliminarTransaccion(t.id)">Eliminar</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <h3 class="section-subtitle">Historial de {{ vistaActual() === 'ingreso' ? 'Ingresos' : 'Egresos' }}</h3>
 
-        <ng-template #emptyState>
+        @if (isLoading()) {
+          <p class="empty-text">Cargando registros...</p>
+        } @else if (listaFiltrada().length === 0) {
           <p class="empty-text">No hay registros en esta sección.</p>
-        </ng-template>
+        } @else {
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>FECHA</th>
+                  <th>DESCRIPCIÓN</th>
+                  <th>CATEGORÍA</th>
+                  <th>MONTO</th>
+                  <th>ACCIONES</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (t of listaFiltrada(); track t.id) {
+                  <tr [class.editing]="t.id === editandoId()">
+                    <td>{{ t.fecha | date: 'dd/MM/yyyy' : 'UTC' }}</td>
+                    <td>{{ t.descripcion }}</td>
+                    <td>{{ t.categoria }}</td>
+                    <td [class.text-green]="t.tipo === 'ingreso'" [class.text-red]="t.tipo === 'egreso'">
+                      Q{{ t.monto | number: '1.2-2' }}
+                    </td>
+                    <td class="action-buttons">
+                      <button type="button" class="btn-edit" (click)="cargarParaEditar(t)">Editar</button>
+                      <button
+                        type="button"
+                        class="btn-delete"
+                        [disabled]="eliminandoId() === t.id"
+                        (click)="eliminarTransaccion(t)"
+                      >
+                        {{ eliminandoId() === t.id ? '...' : 'Eliminar' }}
+                      </button>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       </div>
     </section>
   </main>
