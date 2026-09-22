@@ -1,107 +1,120 @@
-SpendWise: Sistema Integral de Gestión Financiera Personal
+# SpendWise — Gestor de Gastos
 
-SpendWise es una solución tecnológica completa y avanzada orientada al registro, estructuración, análisis y control absoluto de las finanzas personales. Diseñado bajo una arquitectura modular y moderna de alto rendimiento, este sistema permite a los usuarios gestionar sus recursos económicos con precisión quirúrgica, asegurando la confidencialidad de los datos mediante protocolos avanzados de autenticación y cifrado.
-1. Arquitectura y Estructura del Sistema
+Aplicación web para registrar ingresos y egresos personales en quetzales (Q), con dashboard de gráficas, inicio de sesión con correo/contraseña y con Google.
 
-El proyecto opera bajo un modelo de desarrollo estructurado en un entorno monorepositorio que separa rigurosamente la capa de presentación de la interfaz de usuario y la capa de servicios del servidor, garantizando escalabilidad, independencia de despliegue y un mantenimiento modular limpio:
-Plaintext
+- **Frontend:** Angular 22 (standalone components + signals), Chart.js
+- **Backend:** Node.js + Express 5 + TypeScript
+- **Base de datos:** PostgreSQL con Prisma 7
 
-Gestor_De_Gastos_Dashboard/
-│
-├── backend/           # Capa de servicios, API REST, modelos y lógica de negocio
-└── frontend/          # Capa de cliente, vistas interactivas y componentes de Angular
+```
+Gestor_De_Gastos_Final/
+├── backend/    API REST (autenticación y transacciones)
+├── frontend/   Aplicación Angular
+└── docs/       Manuales de usuario
+```
 
-2. Tecnologías y Herramientas Utilizadas
+## Requisitos
 
-El ecosistema tecnológico del proyecto se compone de herramientas modernas de desarrollo de software:
+| Herramienta | Versión |
+|---|---|
+| Node.js | **22.22.3 o superior**, o Node 24 LTS (Angular 22 no arranca con versiones anteriores) |
+| pnpm | **10** o superior (`npm install -g pnpm@10`) |
+| PostgreSQL | 14 o superior, con una base creada llamada `gestor_de_gastos` |
 
-    Frontend: Angular estructurado mediante Standalone Components, TypeScript, HTML5 y CSS avanzado con diseño responsivo.
+## 1. Configurar Google (una sola vez)
 
-    Backend: Node.js y Express para la creación y gestión eficiente de la API RESTful.
+1. Entrar a [Google Cloud Console](https://console.cloud.google.com/) → **APIs y servicios** → **Credenciales**.
+2. Abrir el **ID de cliente de OAuth 2.0** (tipo *Aplicación web*).
+3. En **Orígenes de JavaScript autorizados** agregar:
+   - `http://localhost:4200`
+   - `http://localhost`
+4. Guardar. Los cambios pueden tardar unos minutos en aplicarse.
+5. Copiar el **ID de cliente** y ponerlo en los dos lugares (deben ser idénticos):
+   - `backend/.env` → `GOOGLE_CLIENT_ID`
+   - `frontend/src/environments/environment.ts` → `googleClientId`
 
-    Base de Datos y Persistencia: Prisma ORM para la administración de modelos relacionales y no relacionales de manera segura.
+> Si el botón de Google muestra un error como *"origin not allowed"* o *"The given origin is not allowed"*, falta el paso 3.
 
-    Gestor de Paquetes: pnpm para la optimización en la instalación de dependencias, resolución estricta de versiones y ejecución rápida de scripts de desarrollo.
+## 2. Backend
 
-3. Requisitos Previos del Entorno
+```bash
+cd backend
+pnpm install
+cp .env.example .env        # en Windows: copy .env.example .env
+```
 
-Para asegurar un despliegue y funcionamiento óptimo en cualquier máquina local, es indispensable contar previamente con las siguientes herramientas instaladas y configuradas en el sistema operativo:
+Editar `backend/.env` con los datos reales (usuario/contraseña de PostgreSQL, una `JWT_SECRET` larga y aleatoria, y el `GOOGLE_CLIENT_ID`).
 
-    Node.js: Entorno de ejecución de JavaScript en su versión LTS actual.
+Luego crear las tablas y generar el cliente de Prisma:
 
-    pnpm: Gestor de paquetes de alto rendimiento instalado de forma global en el sistema.
+```bash
+pnpm prisma migrate dev     # aplica la migración y genera el cliente
+pnpm dev                    # servidor en http://localhost:3000 (se reinicia al guardar)
+```
 
-    Git: Sistema de control de versiones para la clonación y seguimiento del repositorio.
+> **Si ya tenía la base de datos de la versión anterior**, la estructura cambió. Ejecute `pnpm prisma migrate reset` (borra los datos de prueba y crea todo de nuevo).
 
-4. Guía Exhaustiva de Instalación y Ejecución Paso a Paso
+Verificar que funciona: abrir http://localhost:3000/api/health → debe responder `{"status":"ok"}`.
 
-Siga detalladamente los comandos a continuación para clonar, configurar y poner en marcha todo el proyecto desde cero en su entorno local.
-Paso 1: Clonación del Repositorio Oficial
+## 3. Frontend
 
-Abra su terminal de comandos habitual y ejecute la clonación del repositorio en su directorio de trabajo local:
-Bash
+En otra terminal:
 
-git clone https://github.com/tu-usuario/Gestor_De_Gastos_Dashboard.git
-cd Gestor_De_Gastos_Dashboard
+```bash
+cd frontend
+pnpm install
+pnpm start                  # http://localhost:4200
+```
 
-Paso 2: Configuración y Despliegue del Servidor (Backend)
+## Endpoints de la API
 
-El servidor se encarga de procesar las peticiones HTTP, manejar la lógica de autenticación y conectar con el motor de base de datos a través de Prisma.
+| Método | Ruta | Descripción | Requiere token |
+|---|---|---|---|
+| POST | `/api/auth/register` | Crear cuenta (`username`, `email`, `password`) | No |
+| POST | `/api/auth/login` | Iniciar sesión (`email`, `password`) | No |
+| POST | `/api/auth/google` | Iniciar sesión / registrarse con Google (`credential`) | No |
+| GET | `/api/auth/me` | Datos del usuario actual | Sí |
+| GET | `/api/transactions` | Listar transacciones del usuario | Sí |
+| POST | `/api/transactions` | Crear transacción | Sí |
+| PUT | `/api/transactions/:id` | Editar transacción | Sí |
+| DELETE | `/api/transactions/:id` | Eliminar transacción | Sí |
 
-    Acceda al directorio del servidor:
-    Bash
+Cuerpo de una transacción:
 
-    cd backend
+```json
+{
+  "descripcion": "Supermercado",
+  "monto": 250.75,
+  "tipo": "egreso",
+  "categoria": "Alimentación",
+  "fecha": "2026-09-20"
+}
+```
 
-    Instale todas las dependencias del proyecto utilizando el gestor optimizado:
-    Bash
+El token se envía en el header `Authorization: Bearer <token>`.
 
-    pnpm install
+## Cómo funciona el inicio de sesión con Google
 
-    Configure las variables de entorno creando o rellenando el archivo .env en la raíz de la carpeta backend con las credenciales de conexión a su base de datos.
+1. El frontend muestra el botón oficial de Google y recibe un *ID token* (`credential`).
+2. Lo envía a `POST /api/auth/google`.
+3. El backend verifica con Google que el token es auténtico, que no expiró y que fue emitido para nuestro Client ID.
+4. Si el usuario no existe se crea automáticamente; si ya existía con ese correo (registrado con contraseña) se vincula su cuenta de Google.
+5. El backend responde con **su propio JWT**, igual que en el login normal.
 
-    Genere los esquemas, migraciones y el cliente tipado del ORM Prisma:
-    Bash
+## Seguridad
 
-    pnpm prisma generate
+- Contraseñas cifradas con bcrypt (mínimo 8 caracteres).
+- Secretos (`JWT_SECRET`, conexión a BD) solo en `.env`, que no se sube a Git.
+- Cada usuario solo puede ver, editar y borrar sus propias transacciones.
+- Los errores internos se registran en el servidor y no se envían al cliente.
 
-    Ejecute las migraciones necesarias para sincronizar la base de datos:
-    Bash
+## Problemas comunes
 
-    pnpm prisma migrate dev
-
-    Inicie el servidor backend en modo de desarrollo activo:
-    Bash
-
-    pnpm start
-
-Paso 3: Configuración y Despliegue de la Interfaz (Frontend)
-
-La aplicación cliente proporciona los paneles visuales, formularios de autenticación y dashboards interactivos para el usuario final.
-
-    Abra una nueva ventana o pestaña independiente en su terminal y diríjase a la carpeta del cliente desde la raíz del proyecto:
-    Bash
-
-    cd frontend
-
-    Instale las dependencias requeridas para la interfaz gráfica:
-    Bash
-
-    pnpm install
-
-    Inicie el servidor de desarrollo de la aplicación cliente en Angular:
-    Bash
-
-    pnpm start
-
-Una vez completado satisfactoriamente este proceso, abra su navegador web de preferencia e ingrese a la siguiente dirección local para interactuar con la plataforma:
-http://localhost:4200/
-5. Módulos, Componentes Principales y Mejoras Implementadas
-
-    Módulo de Autenticación y Seguridad Avanzada: Contiene las vistas de inicio de sesión (/login) y registro de cuentas (/register), diseñadas con un estilo visual profesional de dos columnas en modo oscuro, tarjetas estructuradas y elementos interactivos fluidos. Valida credenciales de forma cifrada e integra de manera nativa los servicios de Google Identity Services para autenticación externa.
-
-    Dashboard Financiero Central: Panel analítico principal que agrupa métricas esenciales de ingresos totales, egresos totales y balances históricos expresados rigurosamente en la moneda local (Quetzales - Q) mediante representaciones visuales claras y actualizadas en tiempo real.
-
-    Módulo de Gestión de Transacciones Dinámicas: Vistas estructuradas enfocadas en permitir al usuario el alta, modificación y eliminación de registros financieros individuales separados de manera estricta entre los botones de Vista Ingresos y Vista Egresos. Incluye formularios dedicados para la descripción, montos numéricos precisos y asignación de categorías específicas, alimentando de forma automática los historiales correspondientes.
-
-    Integración de Configuración Global y Estructura Core: Se han incorporado librerías externas de autenticación directamente en el archivo base de la aplicación (src/index.html) y se ha optimizado la gestión de servicios HTTP mediante interceptores y validadores robustos en TypeScript.
+| Síntoma | Solución |
+|---|---|
+| `Falta la variable de entorno ...` al iniciar el backend | Crear `backend/.env` a partir de `.env.example` |
+| `The Angular CLI requires a minimum Node.js version` | Actualizar Node a 22.22.3+ o 24 LTS |
+| `packages field missing or empty` al hacer `pnpm install` | Actualizar pnpm a la versión 10 |
+| "No se pudo conectar con el servidor" en la app | El backend no está encendido (`pnpm dev` en `backend/`) |
+| Error de Google *origin not allowed* | Revisar el paso 1.3 (orígenes autorizados) |
+| Error de migración o *drift detected* | `pnpm prisma migrate reset` en `backend/` |

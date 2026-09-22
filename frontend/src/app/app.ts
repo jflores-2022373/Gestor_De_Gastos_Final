@@ -11,8 +11,6 @@ import { RouterOutlet } from '@angular/router';
       display: block;
       height: 100vh;
     }
-  `]
+  `],
 })
-export class App {
-  title = 'frontend';
-}
+export class App {}

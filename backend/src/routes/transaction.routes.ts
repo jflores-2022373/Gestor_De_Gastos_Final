@@ -1,11 +1,20 @@
 import { Router } from 'express';
-import { getTransactions, createTransaction, deleteTransaction } from '../controllers/transaction.controller';
-import { verifyToken } from '../middlewares/auth.middleware';
+import {
+  createTransaction,
+  deleteTransaction,
+  getTransactions,
+  updateTransaction,
+} from '../controllers/transaction.controller';
+import { requireAuth } from '../middlewares/auth.middleware';
 
 const router = Router();
 
-router.get('/', verifyToken, getTransactions);
-router.post('/', verifyToken, createTransaction);
-router.delete('/:id', verifyToken, deleteTransaction);
+// Todas las rutas de transacciones requieren sesión iniciada
+router.use(requireAuth);
+
+router.get('/', getTransactions);
+router.post('/', createTransaction);
+router.put('/:id', updateTransaction);
+router.delete('/:id', deleteTransaction);
 
 export default router;

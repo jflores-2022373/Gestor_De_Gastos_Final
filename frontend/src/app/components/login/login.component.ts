@@ -1,144 +1,96 @@
-import {
-  AfterViewInit,
-  Component,
-  ElementRef,
-  NgZone,
-  ViewChild
-} from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
+import { getErrorMessage } from '../../utils/http-error-message';
+import { GoogleButtonComponent } from '../google-button/google-button.component';
 
-declare const google: any;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [FormsModule, RouterModule, GoogleButtonComponent],
   templateUrl: './login.component.html',
-  styleUrls: ['./login.component.css']
+  styleUrls: ['./login.component.css'],
 })
-export class LoginComponent implements AfterViewInit {
-  @ViewChild('googleButton', { static: false })
-  googleButton!: ElementRef<HTMLDivElement>;
+export class LoginComponent implements OnInit {
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
+  // Campos del formulario (solo cambian cuando el usuario escribe)
   credentials = {
     email: '',
-    password: ''
+    password: '',
   };
 
-  errorMessage: string = '';
-  showPassword: boolean = false;
-  isLoading: boolean = false;
+  // Estado que cambia al responder el servidor -> signals (Angular 22 usa OnPush por defecto)
+  readonly errorMessage = signal('');
+  readonly infoMessage = signal('');
+  readonly isLoading = signal(false);
+  readonly showPassword = signal(false);
 
-  private readonly GOOGLE_CLIENT_ID = '166379704284-ulfiv1j087k9c9bboi4sm1ou7lkr2tjj.apps.googleusercontent.com';
-
-  constructor(
-    private router: Router,
-    private ngZone: NgZone,
-    private authService: AuthService
-  ) {}
-
-  ngAfterViewInit(): void {
-    this.inicializarGoogleButton();
-  }
-
-  private inicializarGoogleButton(): void {
-    if (typeof google === 'undefined' || !google.accounts?.id || !this.googleButton) {
-      return;
+  ngOnInit(): void {
+    if (this.route.snapshot.queryParamMap.get('expired') === 'true') {
+      this.infoMessage.set('Su sesión expiró. Inicie sesión de nuevo.');
     }
-
-    google.accounts.id.initialize({
-      client_id: this.GOOGLE_CLIENT_ID,
-      callback: (response: any) => this.handleGoogleLogin(response)
-    });
-
-    google.accounts.id.renderButton(
-      this.googleButton.nativeElement,
-      {
-        theme: 'filled_black',
-        size: 'large',
-        shape: 'rectangular',
-        width: '100%',
-        text: 'signin_with'
-      }
-    );
-  }
-
-  private handleGoogleLogin(response: any): void {
-    this.ngZone.run(() => {
-      if (!response?.credential) {
-        this.errorMessage = 'No se pudo iniciar sesión con Google.';
-        return;
-      }
-
-      localStorage.setItem('token', response.credential);
-
-      try {
-        const payloadBase64 = response.credential.split('.')[1];
-        const decodedPayload = JSON.parse(atob(payloadBase64));
-        if (decodedPayload.email) {
-          localStorage.setItem('userEmail', decodedPayload.email);
-        }
-      } catch (err) {
-        console.error('Error al extraer el email del token de Google', err);
-        localStorage.setItem('userEmail', 'usuario.google@spendwise.com');
-      }
-
-      this.router.navigate(['/dashboard']);
-    });
   }
 
   onLogin(): void {
-    this.errorMessage = '';
+    this.errorMessage.set('');
+    this.infoMessage.set('');
 
     const email = this.credentials.email.trim();
-    const password = this.credentials.password.trim();
+    // La contraseña NO se recorta: los espacios son parte de ella
+    const password = this.credentials.password;
 
     if (!email || !password) {
-      this.errorMessage = 'Por favor, complete todos los campos requeridos.';
+      this.errorMessage.set('Por favor, complete todos los campos requeridos.');
       return;
     }
 
-    if (!this.validarEmail(email)) {
-      this.errorMessage = 'Ingrese un correo electrónico válido.';
+    if (!EMAIL_REGEX.test(email)) {
+      this.errorMessage.set('Ingrese un correo electrónico válido.');
       return;
     }
 
-    this.isLoading = true;
+    this.isLoading.set(true);
 
-    this.authService.login({ email, password }).subscribe({
-      next: (res: any) => {
-        this.isLoading = false;
-        
-        // Capturamos el token sin importar la estructura que devuelva el backend
-        const tokenReal = res.token || res.accessToken || res.data?.token || res.access_token;
-        
-        if (tokenReal) {
-          localStorage.setItem('token', tokenReal);
-          console.log('Token guardado exitosamente en el Login');
-        } else {
-          console.error('El backend no devolvió una estructura de token válida:', res);
-        }
-
-        localStorage.setItem('userEmail', email);
+    this.authService.login(email, password).subscribe({
+      next: () => {
+        this.isLoading.set(false);
         this.router.navigate(['/dashboard']);
       },
       error: (err) => {
-        this.isLoading = false;
-        console.error('Error en el login:', err);
-        this.errorMessage = err.error?.message || 'Credenciales incorrectas o error en el servidor.';
-      }
+        this.isLoading.set(false);
+        this.errorMessage.set(getErrorMessage(err, 'No se pudo iniciar sesión. Intente de nuevo.'));
+      },
     });
   }
 
-  private validarEmail(email: string): boolean {
-    const patron = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return patron.test(email);
+  onGoogleCredential(credential: string): void {
+    this.errorMessage.set('');
+    this.infoMessage.set('');
+    this.isLoading.set(true);
+
+    this.authService.loginWithGoogle(credential).subscribe({
+      next: () => {
+        this.isLoading.set(false);
+        this.router.navigate(['/dashboard']);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(getErrorMessage(err, 'No se pudo iniciar sesión con Google.'));
+      },
+    });
+  }
+
+  onGoogleError(message: string): void {
+    this.errorMessage.set(message);
   }
 
   togglePassword(): void {
-    this.showPassword = !this.showPassword;
+    this.showPassword.update((v) => !v);
   }
 }

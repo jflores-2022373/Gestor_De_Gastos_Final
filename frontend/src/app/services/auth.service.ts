@@ -1,58 +1,68 @@
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
+import { Injectable, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { Observable, switchMap, tap } from 'rxjs';
+import { environment } from '../../environments/environment';
+import { SessionService, SessionUser } from './session.service';
 
-@Injectable({
-  providedIn: 'root'
-})
+interface SessionResponse {
+  message: string;
+  token: string;
+  user: SessionUser;
+}
+
+export interface RegisterData {
+  username: string;
+  email: string;
+  password: string;
+}
+
+@Injectable({ providedIn: 'root' })
 export class AuthService {
-  private apiUrl = 'http://localhost:3000/api/auth';
+  private readonly http = inject(HttpClient);
+  private readonly router = inject(Router);
+  private readonly session = inject(SessionService);
+  private readonly apiUrl = `${environment.apiUrl}/auth`;
 
-  constructor(private http: HttpClient, private router: Router) {}
+  readonly user = this.session.user;
 
-  login(credentials: { email?: string; username?: string; password: string }): Observable<any> {
-    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    return this.http.post<any>(`${this.apiUrl}/login`, credentials, { headers }).pipe(
-      tap(response => {
-        if (response && response.token) {
-          localStorage.setItem('token', response.token);
-          if (response.role) {
-            localStorage.setItem('role', response.role);
-          }
-          const identifier = credentials.email || credentials.username || response.email || response.username || 'usuario_default';
-          localStorage.setItem('userEmail', identifier);
-        }
-      })
-    );
+  login(email: string, password: string): Observable<SessionResponse> {
+    return this.http
+      .post<SessionResponse>(`${this.apiUrl}/login`, { email, password })
+      .pipe(tap((res) => this.session.save(res.token, res.user)));
   }
 
-  register(userData: { email?: string; username?: string; password: string }): Observable<any> {
-    const headers = new HttpHeaders({ 'Content-Type': 'application/json' });
-    return this.http.post<any>(`${this.apiUrl}/register`, userData, { headers });
+  /** Registra la cuenta y deja la sesión iniciada de una vez. */
+  register(data: RegisterData): Observable<SessionResponse> {
+    return this.http
+      .post(`${this.apiUrl}/register`, data)
+      .pipe(switchMap(() => this.login(data.email, data.password)));
   }
 
-  logout(expired: boolean = false): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('role');
-    localStorage.removeItem('userEmail');
-    
-    if (expired) {
-      this.router.navigate(['/login'], { queryParams: { expired: 'true' } });
-    } else {
-      this.router.navigate(['/login']);
-    }
+  /** Envía al backend el "credential" que entrega Google para que lo verifique. */
+  loginWithGoogle(credential: string): Observable<SessionResponse> {
+    return this.http
+      .post<SessionResponse>(`${this.apiUrl}/google`, { credential })
+      .pipe(tap((res) => this.session.save(res.token, res.user)));
   }
 
-  getUserEmail(): string {
-    return localStorage.getItem('userEmail') || 'guest';
-  }
-
-  getToken(): string | null {
-    return localStorage.getItem('token');
+  /** Actualiza los datos del usuario desde el servidor. */
+  refreshUser(): Observable<{ user: SessionUser }> {
+    return this.http
+      .get<{ user: SessionUser }>(`${this.apiUrl}/me`)
+      .pipe(tap((res) => this.session.updateUser(res.user)));
   }
 
   isLoggedIn(): boolean {
-    return !!this.getToken();
+    return this.session.hasValidToken();
+  }
+
+  logout(expired = false): void {
+    this.session.clear();
+    // Evita que Google vuelva a iniciar sesión automáticamente con la misma cuenta
+    const g = (window as { google?: { accounts?: { id?: { disableAutoSelect(): void } } } }).google;
+    g?.accounts?.id?.disableAutoSelect();
+
+    this.router.navigate(['/login'], expired ? { queryParams: { expired: 'true' } } : {});
   }
 }

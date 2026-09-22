@@ -1,37 +1,36 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-
-const SECRET_KEY = 'FinanzasDashboard2026_Key!';
+import { NextFunction, Request, Response } from 'express';
+import { TokenPayload, verifyToken } from '../services/token.service';
 
 export interface AuthRequest extends Request {
-  user?: any;
+  user?: TokenPayload;
 }
 
-export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+/**
+ * Exige un header "Authorization: Bearer <token>" válido.
+ * Si es correcto, deja los datos del usuario en req.user.
+ */
+export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
+  const header = req.headers.authorization;
 
-  if (!token) {
-    res.status(403).json({ message: 'Token requerido' });
+  if (!header || !header.startsWith('Bearer ')) {
+    res.status(401).json({ message: 'Debe iniciar sesión para continuar' });
     return;
   }
 
-  jwt.verify(token, SECRET_KEY, (err, user) => {
-    if (err) {
-      res.status(401).json({ message: 'Token inválido o expirado' });
-      return;
-    }
-    req.user = user;
+  const token = header.slice('Bearer '.length).trim();
+
+  try {
+    req.user = verifyToken(token);
     next();
-  });
+  } catch {
+    res.status(401).json({ message: 'Su sesión expiró o no es válida. Inicie sesión de nuevo.' });
+  }
 };
 
-export const verifyAdmin = (req: AuthRequest, res: Response, next: NextFunction): void => {
-  verifyToken(req, res, () => {
-    if (req.user && req.user.role === 'admin') {
-      next();
-    } else {
-      res.status(403).json({ message: 'Acceso denegado: Se requiere rol de administrador' });
-    }
-  });
-};
+/** Devuelve el id del usuario autenticado (solo usar después de requireAuth). */
+export function getUserId(req: AuthRequest): number {
+  if (!req.user) {
+    throw new Error('getUserId se llamó sin pasar por requireAuth');
+  }
+  return req.user.id;
+}
